@@ -72,8 +72,7 @@ abstract class Expr {
 }
 
 class EqExpr extends Expr {
-  final Expr left;
-  final Expr right;
+  final Expr left, right;
   const EqExpr(this.left, this.right);
 
   dynamic evaluate(Frame f) {
@@ -81,9 +80,26 @@ class EqExpr extends Expr {
   }
 }
 
+class LeExpr extends Expr {
+  final Expr left, right;
+  const LeExpr(this.left, this.right);
+
+  dynamic evaluate(Frame f) {
+    return left.evaluate(f) <= right.evaluate(f);
+  }
+}
+
+class AddExpr extends Expr {
+  final Expr left, right;
+  const AddExpr(this.left, this.right);
+
+  dynamic evaluate(Frame f) {
+    return left.evaluate(f) + right.evaluate(f);
+  }
+}
+
 class SubExpr extends Expr {
-  final Expr left;
-  final Expr right;
+  final Expr left, right;
   const SubExpr(this.left, this.right);
 
   dynamic evaluate(Frame f) {
@@ -92,8 +108,7 @@ class SubExpr extends Expr {
 }
 
 class MulExpr extends Expr {
-  final Expr left;
-  final Expr right;
+  final Expr left, right;
   const MulExpr(this.left, this.right);
 
   dynamic evaluate(Frame f) {

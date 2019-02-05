@@ -197,6 +197,7 @@ class Parser {
   Expr parseComparison() {
     final expr = parseExpr();
     if (at("==")) return EqExpr(expr, parseExpr());
+    if (at("<=")) return LeExpr(expr, parseExpr());
     return expr;
   }
 
@@ -204,7 +205,9 @@ class Parser {
   Expr parseExpr() {
     var expr = parseTerm();
     while (true) {
-      if (at("-"))
+      if (at("+"))
+        expr = AddExpr(expr, parseTerm());
+      else if (at("-"))
         expr = SubExpr(expr, parseTerm());
       else
         break;

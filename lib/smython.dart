@@ -7,6 +7,6 @@ class Smython {
   };
 
   void execute(String source) {
-    Parser(source).parseFileInput().execute(Frame(null, {}, globals));
+    parse(source).evaluate(Frame(null, {}, globals));
   }
 }

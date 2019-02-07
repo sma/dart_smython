@@ -1,22 +1,100 @@
 import 'ast_eval.dart';
 import 'scanner.dart';
 
+/**
+ * Parses **Smython**, a programming language similar to a subset of Python 3.
+ * 
+ * Here is a simple example:
+ * 
+ * ```py
+ * def fac(n):
+ *     if n == 0: return 1
+ *     return n * fac(n - 1)
+ * print(fac(10))
+ * ```
+ * 
+ * Restrictions:
+ * 
+ * Smython has no decorators, `async` functions, typed function parameters, 
+ * function keyword arguments, argument spatting with `*` or `**`, no
+ * `del`, `import`, `global`, `nonlocal`, `assert` or `yield` statements,
+ * no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`, no `continue`
+ * in loops, no `from` clause in `raise`, no `with` statement, no combined
+ * `try`/`except`/`finally`, no multiple inheritance in classes, no lambdas, 
+ * no `<>`, `@`, `//`, `&`, `|`, `^`, `<<`, `>>` or `~` operators, no `await`,
+ * no list or dict comprehension, no `...`, no list in `[ ` but only a single
+ * value or slice, no tripple-quoted, byte or raw string, only unicode one.
+ * 
+ * Currently, Smython uses only `int` for numeric values.
+ * 
+ * EBNF Grammar:
+ * ```
+ * file_input: {NEWLINE | stmt} ENDMARKER
+ * 
+ * stmt: simple_stmt | compound_stmt
+ * simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
+ * small_stmt: expr_stmt | pass_stmt | flow_stmt
+ * expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]
+ * pass_stmt: 'pass'
+ * flow_stmt: break_stmt | return_stmt | raise_stmt
+ * break_stmt: 'break'
+ * return_stmt: 'return' [testlist]
+ * raise_stmt: 'raise' [test]
+ * compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
+ * if_stmt: 'if' test ':' suite {'elif' test ':' suite} ['else' ':' suite]
+ * while_stmt: 'while' test ':' suite ['else' ':' suite]
+ * for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
+ * exprlist: expr {',' expr} [',']
+ * try_stmt: 'try' ':' suite (except_cont | finally_cont)
+ * except_cont: except_clause {except_clause} ['else' ':' suite]
+ * except_clause: 'except' [test ['as' NAME]] ':' suite
+ * finally_cont: 'finally' ':' suite
+ * funcdef: 'def' NAME parameters ':' suite
+ * parameters: '(' [parameter {',' parameter} [',']] ')'
+ * parameter: NAME ['=' test]
+ * classdef: 'class' NAME ['(' [test] ')'] ':' suite
+ *
+ * suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
+ * 
+ * test: or_test ['if' or_test 'else' test]
+ * or_test: and_test {'or' and_test}
+ * and_test: not_test {'and' not_test}
+ * not_test: 'not' not_test | comparison
+ * comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]
+ * expr: term {('+'|'-') term}
+ * term: factor {('*'|'/'|'%') factor}
+ * factor: ('+'|'-') factor | power
+ * power: atom {trailer}
+ * trailer: '(' [testlist] ')' | '[' subscript ']' | '.' NAME
+ * subscript: test | [test] ':' [test] [':' [test]]
+ * atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictorsetmaker] '}' | NAME | NUMBER | STRING+
+ * dictorsetmaker: test ':' test {',' test ':' test} [','] | testlist
+ *
+ * testlist: test {',' test} [',']
+ * ```
+ * 
+ * Parsing may throw a syntax error exception.
+ */
+Suite parse(String source) {
+  return Parser(tokenize(source).iterator).parseFileInput();
+}
+
 class Parser {
   final Iterator<Token> _iter;
 
-  Parser(String source) : _iter = tokenize(source).iterator {
+  Parser(this._iter) {
     advance();
   }
 
   // -------- Helper --------
 
-  /// Returns the current token.
+  /// Returns the current token (not consuming it).
   Token get token => _iter.current;
 
   /// Consumes the curent token and advances to the next token.
   void advance() => _iter.moveNext();
 
-  /// Consumes the current token only if its value is [value].
+  /// Consumes the current token if and only if its value is [value].
   bool at(String value) {
     if (token.value == value) {
       advance();
@@ -25,13 +103,17 @@ class Parser {
     return false;
   }
 
-  /// Consumes the current token if its value is [value]
-  /// and throws a [ParserError] otherwise.
+  /// Consumes the current token if and only if its value is [value]
+  /// and throws a syntax error otherwise.
   void expect(String value) {
-    if (!at(value)) throw ParserError("expected $value but found $token at some line");
+    if (!at(value)) throw syntaxError('expected $value');
   }
 
-  bool get atNewline => at("\n");
+  /// Constructs a syntax error with [message] and the current token.
+  /// It should also denote the line
+  String syntaxError(String message) {
+    return 'SyntaxError: $message but found $token at line ${token.line}';
+  }
 
   // -------- Suite parsing --------
 
@@ -39,14 +121,14 @@ class Parser {
   Suite parseFileInput() {
     final stmts = <Stmt>[];
     while (!at(Token.eof.value)) {
-      if (!atNewline) stmts.addAll(parseStmt());
+      if (!at("\n")) stmts.addAll(parseStmt());
     }
     return Suite(stmts);
   }
 
   // suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
   Suite parseSuite() {
-    if (atNewline) {
+    if (at("\n")) {
       expect(Token.indent.value);
       final stmts = <Stmt>[];
       while (!at(Token.dedent.value)) {
@@ -57,81 +139,154 @@ class Parser {
     return Suite(parseSimpleStmt());
   }
 
-  // -------- Compount statement parsing --------
+  // -------- Statement parsing --------
 
   // stmt: simple_stmt | compound_stmt
   List<Stmt> parseStmt() {
-    final stmt = parseCompoundStmt();
+    final stmt = parseCompoundStmtOpt();
     if (stmt != null) return [stmt];
     return parseSimpleStmt();
   }
 
+  // -------- Compount statement parsing --------
+
   // compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
-  Stmt parseCompoundStmt() {
+  Stmt parseCompoundStmtOpt() {
     if (at("if")) return parseIfStmt();
-    //if (at("while")) return parseWhileStmt();
-    //if (at("for")) return parseForStmt();
-    //if (at("try")) return parseTryStmt();
+    if (at("while")) return parseWhileStmt();
+    if (at("for")) return parseForStmt();
+    if (at("try")) return parseTryStmt();
     if (at("def")) return parseFuncDef();
-    //if (at("class")) return parseClassDef();
+    if (at("class")) return parseClassDef();
     return null;
-  }
-
-  // funcdef: 'def' NAME parameters ':' suite
-  Stmt parseFuncDef() {
-    final name = parseName();
-    final params = parseParameters();
-    expect(":");
-    return DefStmt(name, params, parseSuite());
-  }
-
-  // parameters: '(' [NAME {',' NAME} [',']] ')'
-  List<String> parseParameters() {
-    final params = <String>[];
-    expect("(");
-    if (at(")")) return params;
-    params.add(parseParameter());
-    while (at(",")) {
-      if (at(")")) return params;
-      params.add(parseParameter());
-    }
-    expect(")");
-    return params;
-  }
-
-  // parameter: NAME ['=' test]
-  String parseParameter() {
-    final name = parseName();
-    if (at("=")) {
-      throw ParserError("default parameter value not yet implemented");
-    }
-    return name;
   }
 
   // if_stmt: 'if' test ':' suite {'elif' test ':' suite} ['else' ':' suite]
   Stmt parseIfStmt() {
     final test = parseTest();
     expect(":");
-    return IfStmt(test, parseSuite(), parseIfStmtCont());
+    return IfStmt(test, parseSuite(), _parseIfStmtCont());
   }
 
   // private: ['elif' test ':' suite | 'else' ':' suite]
-  Suite parseIfStmtCont() {
+  Suite _parseIfStmtCont() {
     if (at("elif")) {
       final test = parseTest();
       expect(":");
-      return Suite([IfStmt(test, parseSuite(), parseIfStmtCont())]);
+      return Suite([IfStmt(test, parseSuite(), _parseIfStmtCont())]);
     }
-    return parseElse();
+    return _parseElse();
   }
 
-  //private: ['else' ':' suite]
-  Suite parseElse() {
+  // private: ['else' ':' suite]
+  Suite _parseElse() {
     if (at("else")) {
       expect(":");
       return parseSuite();
     }
     return Suite([const PassStmt()]);
+  }
+
+  // while_stmt: 'while' test ':' suite ['else' ':' suite]
+  Stmt parseWhileStmt() {
+    final test = parseTest();
+    expect(":");
+    return WhileStmt(test, parseSuite(), _parseElse());
+  }
+
+  // for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
+  Stmt parseForStmt() {
+    final target = parseExprListAsTuple();
+    expect("in");
+    final iter = parseTestListAsTuple();
+    expect(":");
+    return ForStmt(target, iter, parseSuite(), _parseElse());
+  }
+
+  // exprlist: expr {',' expr} [',']
+  Expr parseExprListAsTuple() {
+    final expr = parseExpr();
+    if (!at(",")) return expr;
+    final exprs = <Expr>[expr];
+    while (hasTest) {
+      exprs.add(parseExpr());
+      if (!at(",")) break;
+    }
+    return TupleExpr(exprs);
+  }
+
+  // try_stmt: 'try' ':' suite (except_clause {except_clause} ['else' ':' suite] | 'finally' ':' suite)
+  Stmt parseTryStmt() {
+    expect(":");
+    final trySuite = parseSuite();
+    if (at("finally")) {
+      expect(":");
+      return TryFinallyStmt(trySuite, parseSuite());
+    }
+    expect("except");
+    final excepts = <ExceptClause>[_parseExceptClause()];
+    while (at("except")) {
+      excepts.add(_parseExceptClause());
+    }
+    return TryExceptStmt(trySuite, excepts, _parseElse());
+  }
+
+  // except_clause: 'except' [test ['as' NAME]] ':' suite
+  ExceptClause _parseExceptClause() {
+    Expr test = null;
+    String name = null;
+    if (!at(":")) {
+      test = parseTest();
+      if (at("as")) {
+        name = parseName();
+      }
+      expect(":");
+    }
+    return ExceptClause(test, name, parseSuite());
+  }
+
+  // funcdef: 'def' NAME parameters ':' suite
+  Stmt parseFuncDef() {
+    final name = parseName();
+    final defExprs = <Expr>[];
+    final params = parseParameters(defExprs);
+    expect(":");
+    return DefStmt(name, params, defExprs, parseSuite());
+  }
+
+  // parameters: '(' [parameter {',' parameter} [',']] ')'
+  List<String> parseParameters(List<Expr> defExprs) {
+    final params = <String>[];
+    expect("(");
+    if (at(")")) return params;
+    params.add(parseParameter(defExprs));
+    while (at(",")) {
+      if (at(")")) return params;
+      params.add(parseParameter(defExprs));
+    }
+    expect(")");
+    return params;
+  }
+
+  // parameter: NAME ['=' test]
+  String parseParameter(List<Expr> defExprs) {
+    final name = parseName();
+    if (at("=")) defExprs.add(parseTest());
+    return name;
+  }
+
+  // classdef: 'class' NAME ['(' [test] ')'] ':' suite
+  Stmt parseClassDef() {
+    final name = parseName();
+    Expr superExpr = null;
+    if (at("(")) {
+      if (!at(")")) {
+        superExpr = parseTest();
+        expect(")");
+      }
+    }
+    expect(":");
+    return ClassStmt(name, superExpr, parseSuite());
   }
 
   // -------- Simple statement parsing --------
@@ -140,7 +295,7 @@ class Parser {
   List<Stmt> parseSimpleStmt() {
     final stmts = <Stmt>[parseSmallStmt()];
     while (at(";")) {
-      if (atNewline) return stmts;
+      if (at("\n")) return stmts;
       stmts.add(parseSmallStmt());
     }
     expect("\n");
@@ -151,11 +306,15 @@ class Parser {
   // flow_stmt: break_stmt | return_stmt | raise_stmt
   Stmt parseSmallStmt() {
     if (at("pass")) return const PassStmt();
-    // if (at("break")) return const BreakStmt();
+    if (at("break")) return const BreakStmt();
     if (at("return")) {
+      // return_stmt: 'return' [testlist]
       return ReturnStmt(hasTest ? parseTestListAsTuple() : const LitExpr(null));
     }
-    // if (at("raise")) ...
+    if (at("raise")) {
+      // raise_stmt: 'raise' [test]
+      return RaiseStmt(hasTest ? parseTest() : const LitExpr(null));
+    }
     return parseExprStmt();
   }
 
@@ -163,41 +322,72 @@ class Parser {
   Stmt parseExprStmt() {
     if (hasTest) {
       final expr = parseTestListAsTuple();
-      // if (at("=")) return [AssignStmt stmtWithLeftExpr:expr rightExpr:parseTestListAsTuple()];
-      // if (at("+=")) return [AddAssignStmt stmtWithLeftExpr:expr rightExpr:parseTestListAsTuple()];
-      // if (at("-=")) return [SubAssignStmt stmtWithLeftExpr:expr rightExpr:parseTestListAsTuple()];
+      if (at("=")) return AssignStmt(expr, parseTestListAsTuple());
+      // if (at("+=")) return AddAssignStmt(expr, parseTestListAsTuple());
+      // if (at("-=")) return SubAssignStmt(expr, parseTestListAsTuple());
+      // if (at("*=")) return MulAssignStmt(expr, parseTestListAsTuple());
+      // if (at("/=")) return DivAssignStmt(expr, parseTestListAsTuple());
+      // if (at("%=")) return ModAssignStmt(expr, parseTestListAsTuple());
       return ExprStmt(expr);
     }
-    return throw ParserError("expected statement but found $token at some line");
+    return throw syntaxError('expected statement');
   }
 
   // -------- Expression parsing --------
 
   // test: or_test ['if' or_test 'else' test]
   Expr parseTest() {
-    return parseOrTest();
+    final expr = parseOrTest();
+    if (at("if")) {
+      final test = parseOrTest();
+      expect("else");
+      return CondExpr(test, expr, parseTest());
+    }
+    return expr;
   }
 
   // or_test: and_test {'or' and_test}
   Expr parseOrTest() {
-    return parseAndTest();
+    var expr = parseAndTest();
+    while (at("or")) {
+      expr = OrExpr(expr, parseAndTest());
+    }
+    return expr;
   }
 
   // and_test: not_test {'and' not_test}
   Expr parseAndTest() {
-    return parseNotTest();
+    var expr = parseNotTest();
+    while (at("and")) {
+      expr = AndExpr(expr, parseNotTest());
+    }
+    return expr;
   }
 
   // not_test: 'not' not_test | comparison
   Expr parseNotTest() {
+    if (at("not")) return NotExpr(parseNotTest());
     return parseComparison();
   }
 
   // comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]
   Expr parseComparison() {
     final expr = parseExpr();
+    if (at("<")) return LtExpr(expr, parseExpr());
+    if (at(">")) return GtExpr(expr, parseExpr());
     if (at("==")) return EqExpr(expr, parseExpr());
+    if (at(">=")) return GeExpr(expr, parseExpr());
     if (at("<=")) return LeExpr(expr, parseExpr());
+    if (at("!=")) return NeExpr(expr, parseExpr());
+    if (at("in")) return InExpr(expr, parseExpr());
+    if (at("not")) {
+      expect("in");
+      return NotExpr(InExpr(expr, parseExpr()));
+    }
+    if (at("is")) {
+      if (at("not")) return NotExpr(IsExpr(expr, parseExpr()));
+      return IsExpr(expr, parseExpr());
+    }
     return expr;
   }
 
@@ -221,6 +411,10 @@ class Parser {
     while (true) {
       if (at("*"))
         expr = MulExpr(expr, parseFactor());
+      else if (at("/"))
+        expr = DivExpr(expr, parseFactor());
+      else if (at("%"))
+        expr = ModExpr(expr, parseFactor());
       else
         break;
     }
@@ -229,6 +423,8 @@ class Parser {
 
   // factor: ('+'|'-') factor | power
   Expr parseFactor() {
+    if (at("+")) return PosExpr(parseFactor());
+    if (at("-")) return NegExpr(parseFactor());
     return parsePower();
   }
 
@@ -238,8 +434,13 @@ class Parser {
     // trailer: '(' [testlist] ')' | '[' subscript ']' | '.' NAME
     while (true) {
       if (at("(")) {
-        expr = CallExpr(expr, parseTestlistOpt());
+        expr = CallExpr(expr, parseTestListOpt());
         expect(")");
+      } else if (at("[")) {
+        expr = IndexExpr(expr, parseSubscript());
+        expect("]");
+      } else if (at(".")) {
+        expr = AttrExpr(expr, parseName());
       } else {
         break;
       }
@@ -247,18 +448,91 @@ class Parser {
     return expr;
   }
 
+  // subscript: test | [test] ':' [test] [':' [test]]
+  Expr parseSubscript() {
+    Expr start;
+    final none = const LitExpr(null);
+    if (hasTest) {
+      start = parseTest();
+      if (!at(":")) return start;
+    } else {
+      start = none;
+      expect(":");
+    }
+    final stop = hasTest ? parseTest() : none;
+    final step = at(":") && hasTest ? parseTest() : none;
+    return CallExpr(VarExpr("slice"), [start, stop, step]);
+  }
+
   // atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictorsetmaker] '}' | NAME | NUMBER | STRING+
   Expr parseAtom() {
+    if (at("(")) return _parseTupleMaker();
+    if (at("[")) return _parseListMaker();
+    if (at("{")) return _parseDictOrSetMaker();
     final t = token;
     if (t.isName) {
       advance();
-      return VarExpr(t.value);
+      final name = t.value;
+      if (name == "True") return const LitExpr(1);
+      if (name == "False") return const LitExpr(0);
+      if (name == "None") return const LitExpr(null);
+      return VarExpr(name);
     }
     if (t.isNumber) {
       advance();
       return LitExpr(t.number);
     }
-    throw ParserError("unsupported atom $t");
+    if (t.isString) {
+      final buffer = StringBuffer();
+      while (token.isString) {
+        buffer.write(token.string);
+        advance();
+      }
+      return LitExpr(buffer.toString());
+    }
+    throw syntaxError('expected (, [, {, NAME, NUMBER, or STRING');
+  }
+
+  Expr _parseTupleMaker() {
+    if (at(")")) return const TupleExpr([]);
+    final expr = parseTest();
+    if (at(")")) return expr;
+    expect(",");
+    final exprs = [expr] + parseTestListOpt();
+    expect(")");
+    return TupleExpr(exprs);
+  }
+
+  Expr _parseListMaker() {
+    final exprs = parseTestListOpt();
+    expect("]");
+    return ListExpr(exprs);
+  }
+
+  // dictorsetmaker: test ':' test {',' test ':' test} [','] | testlist
+  Expr _parseDictOrSetMaker() {
+    if (at("}")) return const DictExpr([]);
+    final expr = parseTest();
+    if (at(":")) {
+      // dictionary
+      final exprs = <Expr>[
+        TupleExpr([expr, parseTest()])
+      ];
+      while (at(",")) {
+        if (at("}")) return DictExpr(exprs);
+        final key = parseTest();
+        expect(":");
+        exprs.add(TupleExpr([key, parseTest()]));
+      }
+      expect("}");
+      return DictExpr(exprs);
+    } else {
+      // set
+      final exprs = [expr];
+      if (at(",")) exprs.addAll(parseTestListOpt());
+      expect("}");
+      return SetExpr(exprs);
+    }
   }
 
   // NAME
@@ -268,18 +542,22 @@ class Parser {
       advance();
       return t.value;
     }
-    throw ParserError("expected NAME but found $t at some line");
+    throw syntaxError('expected NAME');
   }
 
   // -------- Expression list parsing --------
 
   // testlist: test {',' test} [',']
   Expr parseTestListAsTuple() {
-    return parseTest();
+    final test = parseTest();
+    if (!at(",")) return test;
+    final tests = <Expr>[test];
+    if (hasTest) tests.addAll(parseTestListOpt());
+    return TupleExpr(tests);
   }
 
   // testlist: test {',' test} [',']
-  List<Expr> parseTestlistOpt() {
+  List<Expr> parseTestListOpt() {
     final exprs = <Expr>[];
     if (hasTest) {
       exprs.add(parseTest());
@@ -291,16 +569,12 @@ class Parser {
     return exprs;
   }
 
+  /// Returns whether the current token is a valid start of a test.
+  /// It must be either a name, a number, a string, a prefix operator
+  /// or syntax like `(`, `[`, and `{`.
   bool get hasTest {
-    final t = token;
-    return t.isName || t.isNumber || "+-([{\"'_".contains(t.value[0]);
+    // final t = token;
+    // return t.isName || t.isNumber || "+-([{\"'".contains(t.value[0]);
+    return token.value.startsWith(RegExp('[\\w\'"+\\-([{]')) && !token.isKeyword;
   }
-}
-
-class ParserError extends Error {
-  final String message;
-
-  ParserError(this.message);
-
-  String toString() => message;
 }

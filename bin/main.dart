@@ -1,4 +1,5 @@
-import 'package:smython/smython.dart';
+// import 'package:smython/smython.dart';
+import 'package:smython/test_runner.dart';
 
 final source1 = """
 def fac(n):
@@ -17,5 +18,7 @@ print(fib(20))
 """;
 
 void main() {
-  Smython()..execute(source1)..execute(source2);
+  // Smython()..execute(source1)..execute(source2);
+
+  run("parser_tests.py");
 }

@@ -1,6 +1,7 @@
 import 'package:smython/token.dart';
 export 'package:smython/token.dart';
 
+/// Returns an iteration of [Token]s from [source].
 Iterable<Token> tokenize(String source) sync* {
   int curIndent = 0;
   int newIndent = 0;

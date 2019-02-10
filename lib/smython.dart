@@ -288,7 +288,7 @@ class SmyFunc extends SmyValue {
     for (int i = 0; i < params.length; i++) {
       f.locals[SmyString(params[i])] = i < args.length ? args[i] : defExprs[j++].evaluate(df);
     }
-    return suite.evaluate(f);
+    return suite.evaluateAsFunc(f);
   }
 }
 

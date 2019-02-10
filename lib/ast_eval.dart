@@ -9,13 +9,17 @@ class Suite {
   SmyValue evaluate(Frame f) {
     var result = SmyValue.none;
     for (final stmt in stmts) {
-      try {
-        result = stmt.evaluate(f);
-      } on _Return catch (e) {
-        return e.value;
-      }
+      result = stmt.evaluate(f);
     }
     return result;
+  }
+
+  SmyValue evaluateAsFunc(Frame f) {
+    try {
+      return evaluate(f);
+    } on _Return catch (e) {
+      return e.value;
+    }
   }
 }
 

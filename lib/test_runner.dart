@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:smython/ast_eval.dart';
 import 'package:smython/parser.dart';
+import 'package:smython/smython.dart';
 
 void run(String filename) {
   final report = stdout;
@@ -18,13 +18,13 @@ void run(String filename) {
       report.write(source);
 
       final suite = parse(source);
-      final frame = Frame(null, {}, {
-        'len': (Frame f, List args) {
-          return args[0].length;
-        },
-        'slice': (Frame f, List args) {
-          return args;
-        }
+      final frame = Frame(null, {}, {}, {
+        SmyString('len'): SmyBuiltin((Frame f, List<SmyValue> args) {
+          return SmyInt(args[0].length);
+        }),
+        SmyString('slice'): SmyBuiltin((Frame f, List<SmyValue> args) {
+          return SmyTuple(args);
+        }),
       });
 
       String actual;
@@ -46,9 +46,9 @@ void run(String filename) {
 }
 
 String repr(dynamic value) {
-  if (value == null) return 'None';
-  if (value is String) {
-    return '\'${value.replaceAll('\\', '\\\\').replaceAll('\'', '\\\'').replaceAll('\n', '\\n')}\'';
+  if (value == null) throw 'missing value';
+  if (value is SmyString) {
+    return '\'${value.value.replaceAll('\\', '\\\\').replaceAll('\'', '\\\'').replaceAll('\n', '\\n')}\'';
   }
   return '$value';
 }

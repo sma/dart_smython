@@ -1,3 +1,5 @@
+import 'package:smython/smython.dart';
+
 import 'ast_eval.dart';
 import 'scanner.dart';
 
@@ -278,7 +280,7 @@ class Parser {
   // classdef: 'class' NAME ['(' [test] ')'] ':' suite
   Stmt parseClassDef() {
     final name = parseName();
-    Expr superExpr = null;
+    Expr superExpr = const LitExpr(SmyValue.none);
     if (at("(")) {
       if (!at(")")) {
         superExpr = parseTest();
@@ -309,11 +311,11 @@ class Parser {
     if (at("break")) return const BreakStmt();
     if (at("return")) {
       // return_stmt: 'return' [testlist]
-      return ReturnStmt(hasTest ? parseTestListAsTuple() : const LitExpr(null));
+      return ReturnStmt(hasTest ? parseTestListAsTuple() : const LitExpr(SmyValue.none));
     }
     if (at("raise")) {
       // raise_stmt: 'raise' [test]
-      return RaiseStmt(hasTest ? parseTest() : const LitExpr(null));
+      return RaiseStmt(hasTest ? parseTest() : const LitExpr(SmyValue.none));
     }
     return parseExprStmt();
   }
@@ -451,7 +453,7 @@ class Parser {
   // subscript: test | [test] ':' [test] [':' [test]]
   Expr parseSubscript() {
     Expr start;
-    final none = const LitExpr(null);
+    final none = const LitExpr(SmyValue.none);
     if (hasTest) {
       start = parseTest();
       if (!at(":")) return start;
@@ -461,7 +463,7 @@ class Parser {
     }
     final stop = hasTest ? parseTest() : none;
     final step = at(":") && hasTest ? parseTest() : none;
-    return CallExpr(VarExpr("slice"), [start, stop, step]);
+    return CallExpr(const VarExpr(SmyString("slice")), [start, stop, step]);
   }
 
   // atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictorsetmaker] '}' | NAME | NUMBER | STRING+
@@ -473,14 +475,14 @@ class Parser {
     if (t.isName) {
       advance();
       final name = t.value;
-      if (name == "True") return const LitExpr(1);
-      if (name == "False") return const LitExpr(0);
-      if (name == "None") return const LitExpr(null);
-      return VarExpr(name);
+      if (name == "True") return const LitExpr(SmyValue.trueValue);
+      if (name == "False") return const LitExpr(SmyValue.falseValue);
+      if (name == "None") return const LitExpr(SmyValue.none);
+      return VarExpr(SmyString(name));
     }
     if (t.isNumber) {
       advance();
-      return LitExpr(t.number);
+      return LitExpr(SmyInt(t.number));
     }
     if (t.isString) {
       final buffer = StringBuffer();
@@ -488,7 +490,7 @@ class Parser {
         buffer.write(token.string);
         advance();
       }
-      return LitExpr(buffer.toString());
+      return LitExpr(SmyString(buffer.toString()));
     }
     throw syntaxError('expected (, [, {, NAME, NUMBER, or STRING');
   }
@@ -515,14 +517,12 @@ class Parser {
     final expr = parseTest();
     if (at(":")) {
       // dictionary
-      final exprs = <Expr>[
-        TupleExpr([expr, parseTest()])
-      ];
+      final exprs = <Expr>[expr, parseTest()];
       while (at(",")) {
         if (at("}")) return DictExpr(exprs);
-        final key = parseTest();
+        exprs.add(parseTest());
         expect(":");
-        exprs.add(TupleExpr([key, parseTest()]));
+        exprs.add(parseTest());
       }
       expect("}");
       return DictExpr(exprs);

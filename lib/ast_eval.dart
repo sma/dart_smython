@@ -1,4 +1,4 @@
-import 'dart:collection';
+import 'package:smython/smython.dart';
 
 // -------- Suite --------
 
@@ -6,8 +6,8 @@ class Suite {
   final List<Stmt> stmts;
   const Suite(this.stmts);
 
-  dynamic evaluate(Frame f) {
-    dynamic result = null;
+  SmyValue evaluate(Frame f) {
+    var result = SmyValue.none;
     for (final stmt in stmts) {
       try {
         result = stmt.evaluate(f);
@@ -24,7 +24,7 @@ class Suite {
 abstract class Stmt {
   const Stmt();
 
-  dynamic evaluate(Frame f);
+  SmyValue evaluate(Frame f);
 }
 
 /// `if test: thenSuite else: elseSuite`
@@ -35,12 +35,13 @@ class IfStmt extends Stmt {
   const IfStmt(this.test, this.thenSuite, this.elseSuite);
 
   @override
-  dynamic evaluate(Frame f) {
-    if (test.evaluate(f) as bool) {
+  SmyValue evaluate(Frame f) {
+    if (test.evaluate(f).boolValue) {
       thenSuite.evaluate(f);
     } else {
       elseSuite.evaluate(f);
     }
+    return SmyValue.none;
   }
 }
 
@@ -52,15 +53,15 @@ class WhileStmt extends Stmt {
   const WhileStmt(this.test, this.suite, this.elseSuite);
 
   @override
-  dynamic evaluate(Frame f) {
-    while (test.evaluate(f)) {
+  SmyValue evaluate(Frame f) {
+    while (test.evaluate(f).boolValue) {
       try {
         suite.evaluate(f);
       } on _Break {
-        return;
+        return SmyValue.none;
       }
-      elseSuite.evaluate(f);
     }
+    return elseSuite.evaluate(f);
   }
 }
 
@@ -73,17 +74,17 @@ class ForStmt extends Stmt {
   const ForStmt(this.target, this.items, this.suite, this.elseSuite);
 
   @override
-  dynamic evaluate(Frame f) {
-    Iterable i = items.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    final i = items.evaluate(f).iterable;
     for (final value in i) {
       target.assign(f, value);
       try {
         suite.evaluate(f);
       } on _Break {
-        return;
+        return SmyValue.none;
       }
     }
-    elseSuite.evaluate(f);
+    return elseSuite.evaluate(f);
   }
 }
 
@@ -93,12 +94,13 @@ class TryFinallyStmt extends Stmt {
   const TryFinallyStmt(this.suite, this.finallySuite);
 
   @override
-  dynamic evaluate(Frame f) {
+  SmyValue evaluate(Frame f) {
     try {
       suite.evaluate(f);
     } finally {
       finallySuite.evaluate(f);
     }
+    return SmyValue.none;
   }
 }
 
@@ -107,7 +109,7 @@ class TryExceptStmt extends Stmt {
   const TryExceptStmt(Suite trySuite, List<ExceptClause> excepts, Suite elseSuite);
 
   @override
-  dynamic evaluate(Frame f) => throw "not yet implemented";
+  SmyValue evaluate(Frame f) => throw "not yet implemented";
 }
 
 class ExceptClause {
@@ -123,8 +125,8 @@ class DefStmt extends Stmt {
   const DefStmt(this.name, this.params, this.defs, this.suite);
 
   @override
-  dynamic evaluate(Frame f) {
-    f.locals[name] = _Func(f, params, defs, suite);
+  SmyValue evaluate(Frame f) {
+    return f.locals[SmyString(name)] = SmyFunc(f, params, defs, suite);
   }
 }
 
@@ -136,9 +138,16 @@ class ClassStmt extends Stmt {
   const ClassStmt(this.name, this.superExpr, this.suite);
 
   @override
-  dynamic evaluate(Frame f) {
-    final cls = SmClass(name, superExpr.evaluate(f));
-    suite.evaluate(Frame(f, cls.methods, f.globals));
+  SmyValue evaluate(Frame f) {
+    final superclass = superExpr.evaluate(f);
+    if (superclass != SmyValue.none && !(superclass is SmyClass)) {
+      throw 'TypeError: superclass is not a class';
+    }
+    final n = SmyString(name);
+    final cls = SmyClass(n, superclass != SmyValue.none ? superclass : null);
+    f.locals[n] = cls;
+    suite.evaluate(Frame(f, cls.methods, f.globals, f.builtins));
+    return SmyValue.none;
   }
 }
 
@@ -146,7 +155,9 @@ class ClassStmt extends Stmt {
 class PassStmt extends Stmt {
   const PassStmt();
 
-  dynamic evaluate(Frame f) {}
+  SmyValue evaluate(Frame f) {
+    return SmyValue.none;
+  }
 }
 
 /// `break`
@@ -154,7 +165,7 @@ class BreakStmt extends Stmt {
   const BreakStmt();
 
   @override
-  dynamic evaluate(Frame f) => throw _Break();
+  SmyValue evaluate(Frame f) => throw _Break();
 }
 
 /// `return`, `return test, ...`
@@ -163,7 +174,7 @@ class ReturnStmt extends Stmt {
   const ReturnStmt(this.expr);
 
   @override
-  dynamic evaluate(Frame f) => throw _Return(expr.evaluate(f));
+  SmyValue evaluate(Frame f) => throw _Return(expr.evaluate(f));
 }
 
 /// `raise`, `raise test`
@@ -172,7 +183,7 @@ class RaiseStmt extends Stmt {
   const RaiseStmt(this.expr);
 
   @override
-  dynamic evaluate(Frame f) => throw _Raise(expr.evaluate(f));
+  SmyValue evaluate(Frame f) => throw _Raise(expr.evaluate(f));
 }
 
 class ExprStmt extends Stmt {
@@ -180,7 +191,7 @@ class ExprStmt extends Stmt {
   const ExprStmt(this.expr);
 
   @override
-  dynamic evaluate(Frame f) => expr.evaluate(f);
+  SmyValue evaluate(Frame f) => expr.evaluate(f);
 }
 
 /// `target = test, ...`
@@ -189,7 +200,7 @@ class AssignStmt extends Stmt {
   const AssignStmt(this.lhs, this.rhs);
 
   @override
-  dynamic evaluate(Frame f) => lhs.assign(f, rhs.evaluate(f));
+  SmyValue evaluate(Frame f) => lhs.assign(f, rhs.evaluate(f));
 }
 
 // -------- Expr --------
@@ -198,9 +209,9 @@ abstract class Expr {
   const Expr();
 
   /// Returns the result of the evaluation of this node in the context of [f].
-  dynamic evaluate(Frame f);
+  SmyValue evaluate(Frame f);
 
-  dynamic assign(Frame f, dynamic value) => throw "SyntaxError: can't assign";
+  SmyValue assign(Frame f, SmyValue value) => throw "SyntaxError: can't assign";
 
   /// Returns whether [assign] can be called on this node.
   bool get assignable => false;
@@ -212,8 +223,8 @@ class CondExpr extends Expr {
   const CondExpr(this.test, this.thenExpr, this.elseExpr);
 
   @override
-  dynamic evaluate(Frame f) {
-    return (test.evaluate(f) ? thenExpr : elseExpr).evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return (test.evaluate(f).boolValue ? thenExpr : elseExpr).evaluate(f);
   }
 }
 
@@ -223,8 +234,8 @@ class OrExpr extends Expr {
   const OrExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) || right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyBool(left.evaluate(f).boolValue || right.evaluate(f).boolValue);
   }
 }
 
@@ -234,8 +245,8 @@ class AndExpr extends Expr {
   const AndExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) && right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyBool(left.evaluate(f).boolValue && right.evaluate(f).boolValue);
   }
 }
 
@@ -245,7 +256,7 @@ class NotExpr extends Expr {
   const NotExpr(this.expr);
 
   @override
-  dynamic evaluate(Frame f) => !expr.evaluate(f);
+  SmyValue evaluate(Frame f) => SmyBool(!expr.evaluate(f).boolValue);
 }
 
 /// `expr == expr`
@@ -254,8 +265,8 @@ class EqExpr extends Expr {
   const EqExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) == right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyBool(left.evaluate(f) == right.evaluate(f));
   }
 }
 
@@ -265,8 +276,8 @@ class GeExpr extends Expr {
   const GeExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) >= right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyBool(left.evaluate(f).intValue >= right.evaluate(f).intValue);
   }
 }
 
@@ -276,8 +287,8 @@ class GtExpr extends Expr {
   const GtExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) > right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyBool(left.evaluate(f).intValue > right.evaluate(f).intValue);
   }
 }
 
@@ -287,8 +298,8 @@ class LeExpr extends Expr {
   const LeExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) <= right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyBool(left.evaluate(f).intValue <= right.evaluate(f).intValue);
   }
 }
 
@@ -298,8 +309,8 @@ class LtExpr extends Expr {
   const LtExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) < right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyBool(left.evaluate(f).intValue < right.evaluate(f).intValue);
   }
 }
 
@@ -309,8 +320,8 @@ class NeExpr extends Expr {
   const NeExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) != right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyBool(left.evaluate(f) != right.evaluate(f));
   }
 }
 
@@ -319,7 +330,7 @@ class InExpr extends Expr {
   final Expr left, right;
   const InExpr(this.left, this.right);
 
-  dynamic evaluate(Frame f) => throw "not implemented yet";
+  SmyValue evaluate(Frame f) => throw "in not implemented yet";
 }
 
 /// `expr is expr`
@@ -327,7 +338,7 @@ class IsExpr extends Expr {
   final Expr left, right;
   const IsExpr(this.left, this.right);
 
-  dynamic evaluate(Frame f) => throw "not implemented yet";
+  SmyValue evaluate(Frame f) => throw "is not implemented yet";
 }
 
 /// `expr + expr`
@@ -336,8 +347,8 @@ class AddExpr extends Expr {
   const AddExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) + right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyInt(left.evaluate(f).intValue + right.evaluate(f).intValue);
   }
 }
 
@@ -347,8 +358,8 @@ class SubExpr extends Expr {
   const SubExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) - right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyInt(left.evaluate(f).intValue - right.evaluate(f).intValue);
   }
 }
 
@@ -358,8 +369,8 @@ class MulExpr extends Expr {
   const MulExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) * right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyInt(left.evaluate(f).intValue * right.evaluate(f).intValue);
   }
 }
 
@@ -369,8 +380,8 @@ class DivExpr extends Expr {
   const DivExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) / right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyInt(left.evaluate(f).intValue ~/ right.evaluate(f).intValue);
   }
 }
 
@@ -380,8 +391,8 @@ class ModExpr extends Expr {
   const ModExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
-    return left.evaluate(f) % right.evaluate(f);
+  SmyValue evaluate(Frame f) {
+    return SmyInt(left.evaluate(f).intValue % right.evaluate(f).intValue);
   }
 }
 
@@ -391,7 +402,7 @@ class PosExpr extends Expr {
   const PosExpr(this.expr);
 
   @override
-  dynamic evaluate(Frame f) => expr.evaluate(f);
+  SmyValue evaluate(Frame f) => expr.evaluate(f);
 }
 
 /// `-expr`
@@ -400,7 +411,7 @@ class NegExpr extends Expr {
   const NegExpr(this.expr);
 
   @override
-  dynamic evaluate(Frame f) => -expr.evaluate(f);
+  SmyValue evaluate(Frame f) => SmyInt(-expr.evaluate(f).intValue);
 }
 
 /// `expr(args, ...)`
@@ -409,8 +420,8 @@ class CallExpr extends Expr {
   final List<Expr> args;
   const CallExpr(this.expr, this.args);
 
-  dynamic evaluate(Frame f) {
-    return expr.evaluate(f).call(f, args.map<dynamic>((arg) => arg.evaluate(f)).toList());
+  SmyValue evaluate(Frame f) {
+    return expr.evaluate(f).call(f, args.map<SmyValue>((arg) => arg.evaluate(f)).toList());
   }
 }
 
@@ -420,39 +431,46 @@ class IndexExpr extends Expr {
   const IndexExpr(this.left, this.right);
 
   @override
-  dynamic evaluate(Frame f) {
+  SmyValue evaluate(Frame f) {
     final value = left.evaluate(f);
     final index = right.evaluate(f);
     final length = value.length;
-    if (index is int) {
-      int i = index;
+    if (value is SmyDict) {
+      return value.values[index] ?? SmyValue.none;
+    }
+    if (index is SmyInt) {
+      int i = index.intValue;
       if (i < 0) i += length;
       if (i < 0 || i >= length) throw 'IndexError: index out of range';
-      return value[i];
+      if (value is SmyString) {
+        return SmyString(value.value[i]);
+      }
+      return value.iterable.skip(i).first;
     }
-    int i = index[0] ?? 0;
-    int j = index[1] ?? length;
-    if (index[2] != null) throw 'slicing with step not yet implemented';
+    final slice = (index as SmyTuple).values;
+    int i = slice[0] != SmyValue.none ? slice[0].intValue : 0;
+    int j = slice[1] != SmyValue.none ? slice[1].intValue : length;
+    if (slice[2] != SmyValue.none) throw 'slicing with step not yet implemented';
     if (i < 0) i += length;
     if (i < 0) i = 0;
     if (i > length) i = length;
     if (j < 0) j += length;
     if (j < 0) j = 0;
     if (j > length) j = length;
-    if (value is String) {
-      if (i >= j) return '';
-      return value.substring(i, j);
+    if (value is SmyString) {
+      if (i >= j) return const SmyString('');
+      return SmyString(value.value.substring(i, j));
     }
-    if (value is Tuple) {
-      if (i >= j) return Tuple([]);
-      return Tuple(value.skip(i).take(j - i).toList());
+    if (value is SmyTuple) {
+      if (i >= j) return const SmyTuple([]);
+      return SmyTuple(value.iterable.skip(i).take(j - i).toList());
     }
-    if (i >= j) return [];
-    return value.skip(i).take(j - i).toList();
+    if (i >= j) return const SmyList([]);
+    return SmyList(value.iterable.skip(i).take(j - i).toList());
   }
 
   @override
-  assign(Frame f, value) => throw "not implemented yet";
+  SmyValue assign(Frame f, value) => throw "[]= not implemented yet";
 
   @override
   bool get assignable => true;
@@ -465,10 +483,14 @@ class AttrExpr extends Expr {
   const AttrExpr(this.expr, this.name);
 
   @override
-  evaluate(Frame f) => throw "not implemented yet";
+  SmyValue evaluate(Frame f) {
+    return expr.evaluate(f).getAttr(name);
+  }
 
   @override
-  assign(Frame f, value) => throw "not implemented yet";
+  SmyValue assign(Frame f, value) {
+    return expr.evaluate(f).setAttr(name, value);
+  }
 
   @override
   bool get assignable => true;
@@ -476,11 +498,11 @@ class AttrExpr extends Expr {
 
 /// `NAME`
 class VarExpr extends Expr {
-  final String name;
+  final SmyString name;
   const VarExpr(this.name);
 
   @override
-  dynamic evaluate(Frame f) => f.lookup(name);
+  SmyValue evaluate(Frame f) => f.lookup(name);
 
   @override
   assign(Frame f, value) => f.locals[name] = value;
@@ -491,11 +513,11 @@ class VarExpr extends Expr {
 
 /// `None`, `True`, `False`, `NUMBER`, `STRING`
 class LitExpr extends Expr {
-  final dynamic value;
+  final SmyValue value;
   const LitExpr(this.value);
 
   @override
-  dynamic evaluate(Frame f) => value;
+  SmyValue evaluate(Frame f) => value;
 }
 
 /// `()`, `(expr,)`, `(expr, ...)`
@@ -504,13 +526,13 @@ class TupleExpr extends Expr {
   const TupleExpr(this.exprs);
 
   @override
-  dynamic evaluate(Frame f) {
-    return Tuple(List.unmodifiable(exprs.map((e) => e.evaluate(f))));
+  SmyValue evaluate(Frame f) {
+    return SmyTuple(exprs.map((e) => e.evaluate(f)).toList());
   }
 
   @override
-  dynamic assign(Frame f, dynamic value) {
-    final i = (value as Iterable).iterator;
+  SmyValue assign(Frame f, SmyValue value) {
+    final i = value.iterable.iterator;
     for (final e in exprs) {
       if (!i.moveNext()) throw "ValueError: not enough values to unpack";
       e.assign(f, i.current);
@@ -529,7 +551,10 @@ class ListExpr extends Expr {
   const ListExpr(this.exprs);
 
   @override
-  dynamic evaluate(Frame f) => throw "not yet implemented";
+  SmyValue evaluate(Frame f) {
+    if (exprs.isEmpty) return SmyList([]);
+    return SmyList(exprs.map((e) => e.evaluate(f)).toList());
+  }
 }
 
 /// `{}`, `{expr: expr, ...}`
@@ -538,7 +563,13 @@ class DictExpr extends Expr {
   const DictExpr(this.exprs);
 
   @override
-  dynamic evaluate(Frame f) => throw "not yet implemented";
+  SmyValue evaluate(Frame f) {
+    Map<SmyValue, SmyValue> dict = {};
+    for (int i = 0; i < exprs.length; i += 2) {
+      dict[exprs[i].evaluate(f)] = exprs[i + 1].evaluate(f);
+    }
+    return SmyDict(dict);
+  }
 }
 
 /// `{expr, ...}`
@@ -547,80 +578,17 @@ class SetExpr extends Expr {
   const SetExpr(this.exprs);
 
   @override
-  dynamic evaluate(Frame f) => throw "not yet implemented";
-}
-
-// -------- Runtime --------
-
-class Frame {
-  final Frame parent;
-  final Map<String, dynamic> locals;
-  final Map<String, dynamic> globals;
-
-  Frame(this.parent, this.locals, this.globals);
-
-  dynamic lookup(String name) {
-    if (locals.containsKey(name)) {
-      return locals[name];
-    }
-    if (parent != null) {
-      return parent.lookup(name);
-    }
-    if (globals.containsKey(name)) {
-      return globals[name];
-    }
-    throw "NameError: name '$name' is not defined";
-  }
+  SmyValue evaluate(Frame f) => throw "set not yet implemented";
 }
 
 class _Break {}
 
 class _Return {
-  final dynamic value;
+  final SmyValue value;
   _Return(this.value);
 }
 
 class _Raise {
-  final dynamic value;
+  final SmyValue value;
   _Raise(this.value);
-}
-
-// -------- Runtime values --------
-
-class SmClass {
-  final String name;
-  final SmClass superclass;
-  final Map<String, dynamic> methods = {};
-
-  SmClass(this.name, this.superclass);
-}
-
-class _Func {
-  final Frame df;
-  final List<String> params;
-  final List<Expr> defExprs;
-  final Suite suite;
-
-  _Func(this.df, this.params, this.defExprs, this.suite);
-
-  dynamic call(Frame cf, List<dynamic> args) {
-    final f = Frame(df, {}, df.globals);
-    int j = 0;
-    for (int i = 0; i < params.length; i++) {
-      f.locals[params[i]] = i < args.length ? args[i] : defExprs[j++].evaluate(df);
-    }
-    return suite.evaluate(f);
-  }
-}
-
-class Tuple with IterableMixin {
-  final List<dynamic> _elements;
-
-  Tuple(this._elements);
-
-  @override
-  Iterator get iterator => _elements.iterator;
-
-  @override
-  String toString() => '(${_elements.map((e) => '$e').join(', ')})';
 }

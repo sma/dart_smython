@@ -76,6 +76,19 @@ False
 >>> s
 3
 
+# complex if
+>>> a=1
+>>> if a == 0:
+...     a = a + 1
+... elif a == 1:
+...     a = a + 3
+... else:
+...     a = a + 5
+>>> a
+4
+>>> a = 3; a = (1 if a > 2 else 4); a
+1
+
 # constants
 >>> True, False, None
 (True, False, None)
@@ -110,20 +123,22 @@ False
 IndexError: index out of range
 >>> 'abc'[1:]
 'bc'
+>>> 'abc'[:-2]
+'a'
 
 # lists
 >>> []
 []
->>> [1, [2], 3][1:]
-[[2], 3]
+>>> a = [1, [2], 3]; a[1:], a[:1]
+([[2], 3], [1])
 >>> len([]), len([1])
 (0, 1)
 
 # tuples
 >>> ()
 ()
->>> (1, (2,), 3)[2:]
-(3,)
+>>> a = (1, (2,), 3); a[2:], a[:2]
+((3,), (1, (2,)))
 >>> len(()), len((3,)), len(((), ()))
 (0, 1, 2)
 
@@ -133,6 +148,68 @@ IndexError: index out of range
 >>> a = {'a': 3, 'b': 4}
 >>> len(a), a['a'], a['b'], a['c']
 (2, 3, 4, None)
+
+# complex for
+>>> kk, vv = 0, 0
+>>> for k,v in {3: 1, 4: 2}:
+...     kk = kk + k
+...     vv = vv + v
+>>> (kk, vv)
+(7, 3)
+
+# logic
+>>> False and False
+False
+>>> True and False
+False
+>>> False and True
+False
+>>> True and True
+True
+>>> False or False
+False
+>>> True or False
+True
+>>> False or True
+True
+>>> True or True
+True
+>>> not True, not False
+(False, True)
+>>> not not True
+True
+
+# exceptions
+>>> a = 0
+>>> try:
+...     raise
+...     a = 4
+... except:
+...     a = 1
+... else:
+...     a = a + 1
+>>> a
+1
+>>> a = 0
+>>> try:
+...     try:
+...         raise
+...         a = 4
+...     finally:
+...         a = 1
+... except:
+...     a = a + 1
+>>> a
+2
+>>> a = 0
+>>> try:
+...     a = 4
+... except:
+...     a = 1
+... else:
+...     a = a + 1
+>>> a
+5
 
 # classes & instances
 >>> class A:

@@ -171,6 +171,9 @@ class SmyDict extends SmyValue {
   bool get boolValue => values.isNotEmpty;
 
   @override
+  Iterable<SmyValue> get iterable => values.entries.map((e) => SmyTuple([e.key, e.value]));
+
+  @override
   int get length => values.length;
 }
 

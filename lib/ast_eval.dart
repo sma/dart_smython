@@ -106,14 +106,35 @@ class TryFinallyStmt extends Stmt {
 
 /// `try: suite except test as name: suite else: suite`
 class TryExceptStmt extends Stmt {
-  const TryExceptStmt(Suite trySuite, List<ExceptClause> excepts, Suite elseSuite);
+  final Suite trySuite, elseSuite;
+  final List<ExceptClause> excepts;
+  const TryExceptStmt(this.trySuite, this.excepts, this.elseSuite);
 
   @override
-  SmyValue evaluate(Frame f) => throw "not yet implemented";
+  SmyValue evaluate(Frame f) {
+    try {
+      trySuite.evaluate(f);
+      elseSuite.evaluate(f);
+    } on _Raise catch (e) {
+      final ex = e.value;
+      for (final except in excepts) {
+        // TODO search for the right clause
+        Frame ff = f;
+        if (except.name != null) {
+          ff = Frame(f, {SmyString(except.name): ex}, f.globals, f.builtins);
+        }
+        except.suite.evaluate(ff);
+      }
+    }
+    return SmyValue.none;
+  }
 }
 
 class ExceptClause {
-  const ExceptClause(Expr test, String name, Suite suite);
+  final Expr test;
+  final String name;
+  final Suite suite;
+  const ExceptClause(this.test, this.name, this.suite);
 }
 
 /// `def name(param, ...): suite`

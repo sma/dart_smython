@@ -569,12 +569,12 @@ class Parser {
     return exprs;
   }
 
-  /// Returns whether the current token is a valid start of a test.
-  /// It must be either a name, a number, a string, a prefix operator
-  /// or syntax like `(`, `[`, and `{`.
+  /// Returns whether the current token is a valid start of a `test`.
+  /// It must be either a name, a number, a string, a prefix `+` or `-`,
+  /// the `not` statement, or `(`, `[`, and `{`.
   bool get hasTest {
     // final t = token;
-    // return t.isName || t.isNumber || "+-([{\"'".contains(t.value[0]);
-    return token.value.startsWith(RegExp('[\\w\'"+\\-([{]')) && !token.isKeyword;
+    // return t.isName || t.isNumber || "+-([{\"'".contains(t.value[0]) || t.value == "not";
+    return token.value.startsWith(RegExp('[-+\'"\\d([{]')) || token.isName || token.value == "not";
   }
 }

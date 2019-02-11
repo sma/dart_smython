@@ -19,14 +19,7 @@ void run(String filename) {
       report.write(source);
 
       final suite = parse(source);
-      final frame = Frame(null, {}, {}, {
-        SmyString('len'): SmyBuiltin((Frame f, List<SmyValue> args) {
-          return SmyInt(args[0].length);
-        }),
-        SmyString('slice'): SmyBuiltin((Frame f, List<SmyValue> args) {
-          return SmyTuple(args);
-        }),
-      });
+      final frame = Frame(null, {}, {}, Smython().builtins);
 
       String actual;
       try {

@@ -3,29 +3,106 @@ import 'parser.dart';
 
 /// Main entry point.
 class Smython {
-  final Map<SmyValue, SmyValue> builtins = {
-    SmyString('print'): SmyBuiltin((Frame cf, List<SmyValue> args) {
-      print(args.map((v) => '$v').join(' '));
-      return SmyValue.none;
-    }),
-    SmyString('len'): SmyBuiltin((Frame cf, List<SmyValue> args) {
-      return SmyInt(args[0].length);
-    }),
-  };
-
+  final Map<SmyValue, SmyValue> builtins = {};
   final Map<SmyValue, SmyValue> globals = {};
+
+  Smython() {
+    builtin('print', (Frame cf, List<SmyValue> args) {
+      print(args.map((v) => '$v').join(' '));
+      return None;
+    });
+    builtin('len', (Frame cf, List<SmyValue> args) {
+      if (args.length != 1) throw 'TypeError: len() takes 1 argument (${args.length} given)';
+      return SmyInt(args[0].length);
+    });
+    builtin('slice', (Frame f, List<SmyValue> args) {
+      if (args.length != 3) throw 'TypeError: slice() takes 3 arguments (${args.length} given)';
+      return SmyTuple(args);
+    });
+    builtin('del', (Frame f, List<SmyValue> args) {
+      if (args.length != 2) throw 'TypeError: del() takes 2 arguments (${args.length} given)';
+      final value = args[0];
+      final index = args[1];
+      if (value is SmyList) {
+        if (index is SmyInt) {
+          return value.values.removeAt(index.value);
+        }
+        if (index is SmyTuple) {
+          int length = value.values.length;
+          int start = index.values[0].isNone ? 0 : index.values[0].intValue;
+          int end = index.values[1].isNone ? value.values.length : index.values[1].intValue;
+          if (start < 0) start += length;
+          if (end < 0) end += length;
+          if (start >= end) return None;
+          value.values.removeRange(start, end);
+          return None;
+        }
+        throw 'TypeError: invalid index';
+      }
+      if (value is SmyDict) {
+        return value.values.remove(index);
+      }
+      throw 'TypeError: Unsupported item deletion';
+    });
+  }
+
+  void builtin(String name, dynamic Function(Frame, List<SmyValue>) func) {
+    final bname = SmyString.intern(name);
+    builtins[bname] = SmyBuiltin(bname, func);
+  }
 
   void execute(String source) {
     parse(source).evaluate(Frame(null, globals, globals, builtins));
   }
 }
 
-/// Everything is a Smython value.
+const None = SmyValue.none;
+const True = SmyValue.trueValue;
+const False = SmyValue.falseValue;
+
+SmyValue make(dynamic value) {
+  if (value == null) return None;
+  if (value is bool) return value ? True : False;
+  if (value is int) return SmyInt(value);
+  if (value is String) return SmyString(value);
+  if (value is List<dynamic>) return SmyList(value);
+  if (value is Map<dynamic, dynamic>) return SmyDict(value);
+  if (value is Set<dynamic>) return SmySet(value);
+  throw "TypeError: alien value '$value'";
+}
+
+/// Everything in Smython is a value.
+///
+/// - [SmyNone] represents `None`
+/// - [SmyBool] represents `True` and `False`
+/// - [SmyInt] represents integer numbers
+/// - [SmyDouble] represents double numbers
+/// - [SmyString] represents strings
+/// - [SmyTuple] represents tuples (immutable fixed-size arrays)
+/// - [SmyList] represents lists (mutable growable arrays)
+/// - [SmyDict] represents dicts (mutable hash maps)
+/// - [SmySet] represents sets (mutable hash sets)
+/// - [SmyBultin] represents built-in functions
+/// - [SmyFunc] represents user defined functions
+/// - [SmyMethod] represents methods
+/// - [SmyObject] represents objects
+/// - [SmyClass] represents classes
+///
+/// Each value has an associated boolean value ([boolValue]).
+/// Each value has a print string ([toString]).
+/// Some values have associated [intValue] or [doubleValue].
+/// Some values are callable ([call]).
+/// Some values are iterable ([iterable]).
+/// Those values have an associated length.
+/// Some values have attributes which can be get, set and/or deleted.
+///
 abstract class SmyValue {
   const SmyValue();
 
+  bool get isNone => false;
   bool get boolValue => false;
   int get intValue => throw 'TypeError: Not an integer';
+  String get stringValue => throw 'TypeError: Not a string';
   SmyValue call(Frame f, List<SmyValue> args) => throw 'TypeError: Not callable';
 
   Iterable<SmyValue> get iterable => throw 'TypeError: Not iterable';
@@ -33,15 +110,20 @@ abstract class SmyValue {
 
   SmyValue getAttr(String name) => throw "AttributeError: No attribute '$name'";
   SmyValue setAttr(String name, SmyValue value) => throw "AttributeError: No attribute '$name'";
+  SmyValue delAttr(String name) => throw "AttributeError: No attribute '$name'";
 
-  static const SmyValue none = SmyNone();
+  Map<SmyValue, SmyValue> get mapValue => throw 'TypeError: Not a dict';
+
+  static const SmyValue none = SmyNone._();
   static const SmyValue trueValue = SmyBool(true);
   static const SmyValue falseValue = SmyBool(false);
 }
 
 /// `None` (singleton, equatable, hashable)
 class SmyNone extends SmyValue {
-  const SmyNone();
+  const SmyNone._();
+
+  factory SmyNone() => SmyValue.none;
 
   @override
   bool operator ==(dynamic other) => other is SmyNone;
@@ -51,6 +133,12 @@ class SmyNone extends SmyValue {
 
   @override
   String toString() => 'None';
+
+  @override
+  bool get isNone => true;
+
+  @override
+  bool get boolValue => false;
 }
 
 /// `True` or `False` (singletons, equatable, hashable)
@@ -75,7 +163,6 @@ class SmyBool extends SmyValue {
 class SmyInt extends SmyValue {
   final int value;
   const SmyInt(this.value);
-  const SmyInt.fromBool(bool value) : value = value ? 1 : 0;
 
   @override
   bool operator ==(dynamic other) => other is SmyInt && value == other.value;
@@ -94,6 +181,9 @@ class SmyInt extends SmyValue {
 
 /// `STRING` (equatable, hashable)
 class SmyString extends SmyValue {
+  static Map<String, SmyString> interns = {};
+  static SmyString intern(String value) => interns.putIfAbsent(value, () => SmyString(value));
+
   final String value;
   const SmyString(this.value);
 
@@ -108,6 +198,9 @@ class SmyString extends SmyValue {
 
   @override
   bool get boolValue => value.isNotEmpty;
+
+  @override
+  String get stringValue => value;
 
   @override
   int get length => value.length;
@@ -275,11 +368,15 @@ class SmyMethod extends SmyValue {
 /// `def name(param, ...): ...`
 class SmyFunc extends SmyValue {
   final Frame df;
+  final SmyString name;
   final List<String> params;
   final List<Expr> defExprs;
   final Suite suite;
 
-  const SmyFunc(this.df, this.params, this.defExprs, this.suite);
+  const SmyFunc(this.df, this.name, this.params, this.defExprs, this.suite);
+
+  @override
+  String toString() => '<function $name>';
 
   @override
   SmyValue call(Frame cf, List<SmyValue> args) {
@@ -294,8 +391,12 @@ class SmyFunc extends SmyValue {
 
 /// builtin function like print or len
 class SmyBuiltin extends SmyValue {
+  final SmyString name;
   final SmyValue Function(Frame cf, List<SmyValue> args) func;
-  SmyBuiltin(this.func);
+  const SmyBuiltin(this.name, this.func);
+
+  @override
+  String toString() => '<built-in function $name>';
 
   @override
   SmyValue call(Frame cf, List<SmyValue> args) => func(cf, args);

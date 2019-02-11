@@ -68,7 +68,7 @@ class Token {
     "class",
     "continue",
     "def",
-    "del",
+    //"del",
     "elif",
     "else",
     "except",

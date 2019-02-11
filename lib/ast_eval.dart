@@ -151,7 +151,8 @@ class DefStmt extends Stmt {
 
   @override
   SmyValue evaluate(Frame f) {
-    return f.locals[SmyString(name)] = SmyFunc(f, params, defs, suite);
+    final n = SmyString.intern(name);
+    return f.locals[n] = SmyFunc(f, n, params, defs, suite);
   }
 }
 
@@ -168,7 +169,7 @@ class ClassStmt extends Stmt {
     if (superclass != SmyValue.none && !(superclass is SmyClass)) {
       throw 'TypeError: superclass is not a class';
     }
-    final n = SmyString(name);
+    final n = SmyString.intern(name);
     final cls = SmyClass(n, superclass != SmyValue.none ? superclass : null);
     f.locals[n] = cls;
     suite.evaluate(Frame(f, cls.methods, f.globals, f.builtins));

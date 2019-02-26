@@ -40,10 +40,12 @@ class Token {
     return line;
   }
 
+  @override
   bool operator ==(dynamic other) {
     return other is Token && value == other.value;
   }
 
+  @override
   String toString() => '«$value»';
 
   static const indent = Token("!INDENT", 0, 7);

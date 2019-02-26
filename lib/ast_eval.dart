@@ -181,6 +181,7 @@ class ClassStmt extends Stmt {
 class PassStmt extends Stmt {
   const PassStmt();
 
+  @override
   SmyValue evaluate(Frame f) {
     return SmyValue.none;
   }
@@ -356,6 +357,7 @@ class InExpr extends Expr {
   final Expr left, right;
   const InExpr(this.left, this.right);
 
+  @override
   SmyValue evaluate(Frame f) => throw "in not implemented yet";
 }
 
@@ -364,6 +366,7 @@ class IsExpr extends Expr {
   final Expr left, right;
   const IsExpr(this.left, this.right);
 
+  @override
   SmyValue evaluate(Frame f) => throw "is not implemented yet";
 }
 
@@ -446,6 +449,7 @@ class CallExpr extends Expr {
   final List<Expr> args;
   const CallExpr(this.expr, this.args);
 
+  @override
   SmyValue evaluate(Frame f) {
     return expr.evaluate(f).call(f, args.map<SmyValue>((arg) => arg.evaluate(f)).toList());
   }
@@ -531,7 +535,7 @@ class VarExpr extends Expr {
   SmyValue evaluate(Frame f) => f.lookup(name);
 
   @override
-  assign(Frame f, value) => f.locals[name] = value;
+  SmyValue assign(Frame f, value) => f.locals[name] = value;
 
   @override
   bool get assignable => true;

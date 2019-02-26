@@ -3,80 +3,78 @@ import 'package:smython/smython.dart';
 import 'ast_eval.dart';
 import 'scanner.dart';
 
-/**
- * Parses **Smython**, a programming language similar to a subset of Python 3.
- * 
- * Here is a simple example:
- * 
- * ```py
- * def fac(n):
- *     if n == 0: return 1
- *     return n * fac(n - 1)
- * print(fac(10))
- * ```
- * 
- * Restrictions:
- * 
- * Smython has no decorators, `async` functions, typed function parameters, 
- * function keyword arguments, argument spatting with `*` or `**`, no
- * `del`, `import`, `global`, `nonlocal`, `assert` or `yield` statements,
- * no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`, no `continue`
- * in loops, no `from` clause in `raise`, no `with` statement, no combined
- * `try`/`except`/`finally`, no multiple inheritance in classes, no lambdas, 
- * no `<>`, `@`, `//`, `&`, `|`, `^`, `<<`, `>>` or `~` operators, no `await`,
- * no list or dict comprehension, no `...`, no list in `[ ` but only a single
- * value or slice, no tripple-quoted, byte or raw string, only unicode one.
- * 
- * Currently, Smython uses only `int` for numeric values.
- * 
- * EBNF Grammar:
- * ```
- * file_input: {NEWLINE | stmt} ENDMARKER
- * 
- * stmt: simple_stmt | compound_stmt
- * simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
- * small_stmt: expr_stmt | pass_stmt | flow_stmt
- * expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]
- * pass_stmt: 'pass'
- * flow_stmt: break_stmt | return_stmt | raise_stmt
- * break_stmt: 'break'
- * return_stmt: 'return' [testlist]
- * raise_stmt: 'raise' [test]
- * compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
- * if_stmt: 'if' test ':' suite {'elif' test ':' suite} ['else' ':' suite]
- * while_stmt: 'while' test ':' suite ['else' ':' suite]
- * for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
- * exprlist: expr {',' expr} [',']
- * try_stmt: 'try' ':' suite (except_cont | finally_cont)
- * except_cont: except_clause {except_clause} ['else' ':' suite]
- * except_clause: 'except' [test ['as' NAME]] ':' suite
- * finally_cont: 'finally' ':' suite
- * funcdef: 'def' NAME parameters ':' suite
- * parameters: '(' [parameter {',' parameter} [',']] ')'
- * parameter: NAME ['=' test]
- * classdef: 'class' NAME ['(' [test] ')'] ':' suite
- *
- * suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
- * 
- * test: or_test ['if' or_test 'else' test]
- * or_test: and_test {'or' and_test}
- * and_test: not_test {'and' not_test}
- * not_test: 'not' not_test | comparison
- * comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]
- * expr: term {('+'|'-') term}
- * term: factor {('*'|'/'|'%') factor}
- * factor: ('+'|'-') factor | power
- * power: atom {trailer}
- * trailer: '(' [testlist] ')' | '[' subscript ']' | '.' NAME
- * subscript: test | [test] ':' [test] [':' [test]]
- * atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictorsetmaker] '}' | NAME | NUMBER | STRING+
- * dictorsetmaker: test ':' test {',' test ':' test} [','] | testlist
- *
- * testlist: test {',' test} [',']
- * ```
- * 
- * Parsing may throw a syntax error exception.
- */
+/// Parses **Smython**, a programming language similar to a subset of Python 3.
+/// 
+/// Here is a simple example:
+/// 
+/// ```py
+/// def fac(n):
+///     if n == 0: return 1
+///     return n * fac(n - 1)
+/// print(fac(10))
+/// ```
+/// 
+/// Restrictions:
+/// 
+/// Smython has no decorators, `async` functions, typed function parameters, 
+/// function keyword arguments, argument spatting with `*` or `**`, no
+/// `del`, `import`, `global`, `nonlocal`, `assert` or `yield` statements,
+/// no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`, no `continue`
+/// in loops, no `from` clause in `raise`, no `with` statement, no combined
+/// `try`/`except`/`finally`, no multiple inheritance in classes, no lambdas, 
+/// no `<>`, `@`, `//`, `&`, `|`, `^`, `<<`, `>>` or `~` operators, no `await`,
+/// no list or dict comprehension, no `...`, no list in `[ ` but only a single
+/// value or slice, no tripple-quoted, byte or raw string, only unicode one.
+/// 
+/// Currently, Smython uses only `int` for numeric values.
+/// 
+/// EBNF Grammar:
+/// ```
+/// file_input: {NEWLINE | stmt} ENDMARKER
+/// 
+/// stmt: simple_stmt | compound_stmt
+/// simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
+/// small_stmt: expr_stmt | pass_stmt | flow_stmt
+/// expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]
+/// pass_stmt: 'pass'
+/// flow_stmt: break_stmt | return_stmt | raise_stmt
+/// break_stmt: 'break'
+/// return_stmt: 'return' [testlist]
+/// raise_stmt: 'raise' [test]
+/// compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
+/// if_stmt: 'if' test ':' suite {'elif' test ':' suite} ['else' ':' suite]
+/// while_stmt: 'while' test ':' suite ['else' ':' suite]
+/// for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
+/// exprlist: expr {',' expr} [',']
+/// try_stmt: 'try' ':' suite (except_cont | finally_cont)
+/// except_cont: except_clause {except_clause} ['else' ':' suite]
+/// except_clause: 'except' [test ['as' NAME]] ':' suite
+/// finally_cont: 'finally' ':' suite
+/// funcdef: 'def' NAME parameters ':' suite
+/// parameters: '(' [parameter {',' parameter} [',']] ')'
+/// parameter: NAME ['=' test]
+/// classdef: 'class' NAME ['(' [test] ')'] ':' suite
+///
+/// suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
+/// 
+/// test: or_test ['if' or_test 'else' test]
+/// or_test: and_test {'or' and_test}
+/// and_test: not_test {'and' not_test}
+/// not_test: 'not' not_test | comparison
+/// comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]
+/// expr: term {('+'|'-') term}
+/// term: factor {('*'|'/'|'%') factor}
+/// factor: ('+'|'-') factor | power
+/// power: atom {trailer}
+/// trailer: '(' [testlist] ')' | '[' subscript ']' | '.' NAME
+/// subscript: test | [test] ':' [test] [':' [test]]
+/// atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictorsetmaker] '}' | NAME | NUMBER | STRING+
+/// dictorsetmaker: test ':' test {',' test ':' test} [','] | testlist
+///
+/// testlist: test {',' test} [',']
+/// ```
+/// 
+/// Parsing may throw a syntax error exception.
 Suite parse(String source) {
   return Parser(tokenize(source).iterator).parseFileInput();
 }
@@ -235,8 +233,8 @@ class Parser {
 
   // except_clause: 'except' [test ['as' NAME]] ':' suite
   ExceptClause _parseExceptClause() {
-    Expr test = null;
-    String name = null;
+    Expr test;
+    String name;
     if (!at(":")) {
       test = parseTest();
       if (at("as")) {

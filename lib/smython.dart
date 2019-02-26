@@ -213,7 +213,7 @@ class SmyTuple extends SmyValue {
 
   @override
   String toString() {
-    if (values.length == 0) return '()';
+    if (values.isEmpty) return '()';
     if (values.length == 1) return '(${values[0]},)';
     return '(${values.map((v) => '$v').join(', ')})';
   }

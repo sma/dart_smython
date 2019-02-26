@@ -62,7 +62,7 @@ class Token {
     });
   }
 
-  static final _keywords = Set.of([
+  static const _keywords = {
     "and",
     "as",
     "assert",
@@ -93,5 +93,5 @@ class Token {
     "while",
     "with",
     "yield",
-  ]);
+  };
 }

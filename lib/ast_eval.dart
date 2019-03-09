@@ -71,8 +71,8 @@ class WhileStmt extends Stmt {
 
 /// `for target, ... in test, ...: suite else: suite`
 class ForStmt extends Stmt {
-  final Expr target;
-  final Expr items;
+  final TupleExpr target;
+  final TupleExpr items;
   final Suite suite;
   final Suite elseSuite;
   const ForStmt(this.target, this.items, this.suite, this.elseSuite);
@@ -214,7 +214,7 @@ class RaiseStmt extends Stmt {
 }
 
 class ExprStmt extends Stmt {
-  final Expr expr;
+  final TupleExpr expr;
   const ExprStmt(this.expr);
 
   @override
@@ -223,7 +223,7 @@ class ExprStmt extends Stmt {
 
 /// `target = test, ...`
 class AssignStmt extends Stmt {
-  final Expr lhs, rhs;
+  final TupleExpr lhs, rhs;
   const AssignStmt(this.lhs, this.rhs);
 
   @override

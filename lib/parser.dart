@@ -4,34 +4,34 @@ import 'ast_eval.dart';
 import 'scanner.dart';
 
 /// Parses **Smython**, a programming language similar to a subset of Python 3.
-/// 
+///
 /// Here is a simple example:
-/// 
+///
 /// ```py
 /// def fac(n):
 ///     if n == 0: return 1
 ///     return n * fac(n - 1)
 /// print(fac(10))
 /// ```
-/// 
-/// Restrictions:
-/// 
-/// Smython has no decorators, `async` functions, typed function parameters, 
+///
+/// Syntax differences to Python 3:
+///
+/// Smython has no decorators, `async` functions, typed function parameters,
 /// function keyword arguments, argument spatting with `*` or `**`, no
 /// `del`, `import`, `global`, `nonlocal`, `assert` or `yield` statements,
 /// no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`, no `continue`
 /// in loops, no `from` clause in `raise`, no `with` statement, no combined
-/// `try`/`except`/`finally`, no multiple inheritance in classes, no lambdas, 
+/// `try`/`except`/`finally`, no multiple inheritance in classes, no lambdas,
 /// no `<>`, `@`, `//`, `&`, `|`, `^`, `<<`, `>>` or `~` operators, no `await`,
 /// no list or dict comprehension, no `...`, no list in `[ ` but only a single
 /// value or slice, no tripple-quoted, byte or raw string, only unicode one.
-/// 
+///
 /// Currently, Smython uses only `int` for numeric values.
-/// 
+///
 /// EBNF Grammar:
 /// ```
 /// file_input: {NEWLINE | stmt} ENDMARKER
-/// 
+///
 /// stmt: simple_stmt | compound_stmt
 /// simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
 /// small_stmt: expr_stmt | pass_stmt | flow_stmt
@@ -56,7 +56,7 @@ import 'scanner.dart';
 /// classdef: 'class' NAME ['(' [test] ')'] ':' suite
 ///
 /// suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
-/// 
+///
 /// test: or_test ['if' or_test 'else' test]
 /// or_test: and_test {'or' and_test}
 /// and_test: not_test {'and' not_test}
@@ -73,8 +73,8 @@ import 'scanner.dart';
 ///
 /// testlist: test {',' test} [',']
 /// ```
-/// 
-/// Parsing may throw a syntax error exception.
+///
+/// Parsing may throw a syntax error.
 Suite parse(String source) {
   return Parser(tokenize(source).iterator).parseFileInput();
 }
@@ -103,14 +103,14 @@ class Parser {
     return false;
   }
 
-  /// Consumes the current token if and only if its value is [value]
-  /// and throws a syntax error otherwise.
+  /// Consumes the current token if and only if its value is [value] and throws
+  /// a syntax error otherwise.
   void expect(String value) {
     if (!at(value)) throw syntaxError('expected $value');
   }
 
   /// Constructs a syntax error with [message] and the current token.
-  /// It should also denote the line
+  /// It should also denote the line.
   String syntaxError(String message) {
     return 'SyntaxError: $message but found $token at line ${token.line}';
   }
@@ -204,7 +204,7 @@ class Parser {
   }
 
   // exprlist: expr {',' expr} [',']
-  Expr parseExprListAsTuple() {
+  TupleExpr parseExprListAsTuple() {
     final expr = parseExpr();
     if (!at(",")) return expr;
     final exprs = <Expr>[expr];
@@ -546,7 +546,7 @@ class Parser {
   // -------- Expression list parsing --------
 
   // testlist: test {',' test} [',']
-  Expr parseTestListAsTuple() {
+  TupleExpr parseTestListAsTuple() {
     final test = parseTest();
     if (!at(",")) return test;
     final tests = <Expr>[test];

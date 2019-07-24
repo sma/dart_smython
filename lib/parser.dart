@@ -196,15 +196,15 @@ class Parser {
 
   // for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
   Stmt parseForStmt() {
-    final target = parseExprListAsTuple();
+    final target = parseExprOrListAsTuple();
     expect("in");
-    final iter = parseTestListAsTuple();
+    final iter = parseTestOrListAsTuple();
     expect(":");
     return ForStmt(target, iter, parseSuite(), _parseElse());
   }
 
   // exprlist: expr {',' expr} [',']
-  TupleExpr parseExprListAsTuple() {
+  Expr parseExprOrListAsTuple() {
     final expr = parseExpr();
     if (!at(",")) return expr;
     final exprs = <Expr>[expr];
@@ -307,27 +307,31 @@ class Parser {
   Stmt parseSmallStmt() {
     if (at("pass")) return const PassStmt();
     if (at("break")) return const BreakStmt();
-    if (at("return")) {
-      // return_stmt: 'return' [testlist]
-      return ReturnStmt(hasTest ? parseTestListAsTuple() : const LitExpr(SmyValue.none));
-    }
-    if (at("raise")) {
-      // raise_stmt: 'raise' [test]
-      return RaiseStmt(hasTest ? parseTest() : const LitExpr(SmyValue.none));
-    }
+    if (at("return")) return parseReturnStmt();
+    if (at("raise")) return parseRaiseStmt();
     return parseExprStmt();
+  }
+
+  // return_stmt: 'return' [testlist]
+  Stmt parseReturnStmt() {
+    return ReturnStmt(hasTest ? parseTestOrListAsTuple() : const LitExpr(SmyValue.none));
+  }
+
+  // raise_stmt: 'raise' [test]
+  Stmt parseRaiseStmt() {
+    return RaiseStmt(hasTest ? parseTest() : const LitExpr(SmyValue.none));
   }
 
   // expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]
   Stmt parseExprStmt() {
     if (hasTest) {
-      final expr = parseTestListAsTuple();
-      if (at("=")) return AssignStmt(expr, parseTestListAsTuple());
-      // if (at("+=")) return AddAssignStmt(expr, parseTestListAsTuple());
-      // if (at("-=")) return SubAssignStmt(expr, parseTestListAsTuple());
-      // if (at("*=")) return MulAssignStmt(expr, parseTestListAsTuple());
-      // if (at("/=")) return DivAssignStmt(expr, parseTestListAsTuple());
-      // if (at("%=")) return ModAssignStmt(expr, parseTestListAsTuple());
+      final expr = parseTestOrListAsTuple();
+      if (at("=")) return AssignStmt(expr, parseTestOrListAsTuple());
+      // if (at("+=")) return AddAssignStmt(expr, parseTestOrListAsTuple());
+      // if (at("-=")) return SubAssignStmt(expr, parseTestOrListAsTuple());
+      // if (at("*=")) return MulAssignStmt(expr, parseTestOrListAsTuple());
+      // if (at("/=")) return DivAssignStmt(expr, parseTestOrListAsTuple());
+      // if (at("%=")) return ModAssignStmt(expr, parseTestOrListAsTuple());
       return ExprStmt(expr);
     }
     return throw syntaxError('expected statement');
@@ -546,7 +550,7 @@ class Parser {
   // -------- Expression list parsing --------
 
   // testlist: test {',' test} [',']
-  TupleExpr parseTestListAsTuple() {
+  Expr parseTestOrListAsTuple() {
     final test = parseTest();
     if (!at(",")) return test;
     final tests = <Expr>[test];

@@ -237,3 +237,18 @@ True
 >>> del(a, 1)
 >>> b, len(a)
 (1, 0)
+
+# factorial
+>>> def fac(n):
+...     if n == 0:
+...         return 1
+...     return n * fac(n - 1)
+>>> fac(11)
+39916800
+
+# fibonacci
+>>> def fib(n):
+...     if n <= 2: return 1
+...     return fib(n - 1) + fib(n - 2)
+>>> fib(20)
+6765

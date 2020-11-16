@@ -40,13 +40,13 @@ class Smython {
         throw 'TypeError: invalid index';
       }
       if (value is SmyDict) {
-        return value.values.remove(index);
+        return value.values.remove(index) ?? SmyValue.none;
       }
       throw 'TypeError: Unsupported item deletion';
     });
   }
 
-  void builtin(String name, dynamic Function(Frame, List<SmyValue>) func) {
+  void builtin(String name, SmyValue Function(Frame, List<SmyValue>) func) {
     final bname = SmyString.intern(name);
     builtins[bname] = SmyBuiltin(bname, func);
   }
@@ -65,9 +65,9 @@ SmyValue make(dynamic value) {
   if (value is bool) return value ? True : False;
   if (value is int) return SmyInt(value);
   if (value is String) return SmyString(value);
-  if (value is List<dynamic>) return SmyList(value);
-  if (value is Map<dynamic, dynamic>) return SmyDict(value);
-  if (value is Set<dynamic>) return SmySet(value);
+  if (value is List<SmyValue>) return SmyList(value);
+  if (value is Map<SmyValue, SmyValue>) return SmyDict(value);
+  if (value is Set<SmyValue>) return SmySet(value);
   throw "TypeError: alien value '$value'";
 }
 
@@ -114,9 +114,9 @@ abstract class SmyValue {
 
   Map<SmyValue, SmyValue> get mapValue => throw 'TypeError: Not a dict';
 
-  static const SmyValue none = SmyNone._();
-  static const SmyValue trueValue = SmyBool(true);
-  static const SmyValue falseValue = SmyBool(false);
+  static const SmyNone none = SmyNone._();
+  static const SmyBool trueValue = SmyBool(true);
+  static const SmyBool falseValue = SmyBool(false);
 }
 
 /// `None` (singleton, equatable, hashable)
@@ -282,16 +282,16 @@ class SmySet extends SmyValue {
 /// `class name (super): ...`
 class SmyClass extends SmyValue {
   final SmyString _name;
-  final SmyClass _superclass;
+  final SmyClass? _superclass;
   final SmyDict _dict = SmyDict({});
 
   SmyClass(this._name, this._superclass);
 
   Map<SmyValue, SmyValue> get methods => _dict.values;
 
-  SmyValue findAttr(String name) {
+  SmyValue? findAttr(String name) {
     final n = SmyString(name);
-    for (var cls = this; cls != null; cls = cls._superclass) {
+    for (SmyClass? cls = this; cls != null; cls = cls._superclass) {
       final value = cls._dict.values[n];
       if (value != null) return value;
     }
@@ -405,7 +405,7 @@ class SmyBuiltin extends SmyValue {
 // -------- Runtime --------
 
 class Frame {
-  final Frame parent;
+  final Frame? parent;
   final Map<SmyValue, SmyValue> locals;
   final Map<SmyValue, SmyValue> globals;
   final Map<SmyValue, SmyValue> builtins;
@@ -414,16 +414,16 @@ class Frame {
 
   SmyValue lookup(SmyString name) {
     if (locals.containsKey(name)) {
-      return locals[name];
+      return locals[name]!;
     }
     if (parent != null) {
-      return parent.lookup(name);
+      return parent!.lookup(name);
     }
     if (globals.containsKey(name)) {
-      return globals[name];
+      return globals[name]!;
     }
     if (builtins.containsKey(name)) {
-      return builtins[name];
+      return builtins[name]!;
     }
     throw "NameError: name '$name' is not defined";
   }

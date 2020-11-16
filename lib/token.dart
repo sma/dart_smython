@@ -10,7 +10,7 @@ class Token {
 
   const Token(this._source, this._start, this._end);
 
-  /// Returns the piece of string this token represents.
+  /// Returns the piece of source code this token represents.
   String get value => _source.substring(_start, _end);
 
   /// Returns whether this token is a Smython keyword.
@@ -25,13 +25,13 @@ class Token {
   /// Returns whether this token is a STRING.
   bool get isString => _source[_start] == '"' || _source[_start] == '\'';
 
-  /// Returns the token's number value (only valid if [isNumber] is true).
+  /// Returns the token's numeric value (only valid if [isNumber] is true).
   int get number => int.parse(value);
 
   /// Returns the token's string value (only valid if [isString] is true).
   String get string => _unescape(_source.substring(_start + 1, _end - 1));
 
-  /// Returns the line this token is at (1-based).
+  /// Returns the line of the source code this token is at (1-based).
   int get line {
     int line = 1;
     for (int i = 0; i < _start; i++) {
@@ -51,13 +51,13 @@ class Token {
   static const indent = Token("!INDENT", 0, 7);
 
   static const dedent = Token("!DEDENT", 0, 7);
-  
+
   static const eof = Token("!EOF", 0, 4);
 
   static String _unescape(String s) {
     // see scanner.dart for which string escapes are supported
     return s.replaceAllMapped(RegExp('\\\\([n\'"\\\\])'), (match) {
-      final s = match.group(1);
+      final s = match.group(1)!;
       return s == 'n' ? '\n' : s;
     });
   }

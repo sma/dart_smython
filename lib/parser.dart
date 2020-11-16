@@ -151,7 +151,7 @@ class Parser {
   // -------- Compount statement parsing --------
 
   // compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
-  Stmt parseCompoundStmtOpt() {
+  Stmt? parseCompoundStmtOpt() {
     if (at("if")) return parseIfStmt();
     if (at("while")) return parseWhileStmt();
     if (at("for")) return parseForStmt();
@@ -233,8 +233,8 @@ class Parser {
 
   // except_clause: 'except' [test ['as' NAME]] ':' suite
   ExceptClause _parseExceptClause() {
-    Expr test;
-    String name;
+    Expr? test;
+    String? name;
     if (!at(":")) {
       test = parseTest();
       if (at("as")) {

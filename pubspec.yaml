@@ -1,7 +1,7 @@
 name: smython
 description: A subset of Python 3, just large enough to run `fac`.
-version: 0.1.1
+version: 0.2.0
 author: Stefan Matthias Aust <eibaan@gmail.com>
 homepage: https://github.com/sma/smythondart/
 environment:
-  sdk: '>=2.4.0 <3.0.0'
+  sdk: '>=2.12.0-0 <3.0.0'

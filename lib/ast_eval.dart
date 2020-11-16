@@ -7,7 +7,7 @@ class Suite {
   const Suite(this.stmts);
 
   SmyValue evaluate(Frame f) {
-    var result = SmyValue.none;
+    SmyValue result = SmyValue.none;
     for (final stmt in stmts) {
       result = stmt.evaluate(f);
     }
@@ -125,7 +125,7 @@ class TryExceptStmt extends Stmt {
         // TODO search for the right clause
         Frame ff = f;
         if (except.name != null) {
-          ff = Frame(f, {SmyString(except.name): ex}, f.globals, f.builtins);
+          ff = Frame(f, {SmyString(except.name!): ex}, f.globals, f.builtins);
         }
         except.suite.evaluate(ff);
       }
@@ -135,8 +135,8 @@ class TryExceptStmt extends Stmt {
 }
 
 class ExceptClause {
-  final Expr test;
-  final String name;
+  final Expr? test;
+  final String? name;
   final Suite suite;
   const ExceptClause(this.test, this.name, this.suite);
 }
@@ -170,7 +170,7 @@ class ClassStmt extends Stmt {
       throw 'TypeError: superclass is not a class';
     }
     final n = SmyString.intern(name);
-    final cls = SmyClass(n, superclass != SmyValue.none ? superclass : null);
+    final cls = SmyClass(n, superclass != SmyValue.none ? superclass as SmyClass : null);
     f.locals[n] = cls;
     suite.evaluate(Frame(f, cls.methods, f.globals, f.builtins));
     return SmyValue.none;

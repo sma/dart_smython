@@ -123,7 +123,7 @@ class TryExceptStmt extends Stmt {
       final ex = e.value;
       for (final except in excepts) {
         // TODO search for the right clause
-        Frame ff = f;
+        var ff = f;
         if (except.name != null) {
           ff = Frame(f, {SmyString(except.name!): ex}, f.globals, f.builtins);
         }
@@ -358,7 +358,7 @@ class InExpr extends Expr {
   const InExpr(this.left, this.right);
 
   @override
-  SmyValue evaluate(Frame f) => throw "in not implemented yet";
+  SmyValue evaluate(Frame f) => throw 'in not implemented yet';
 }
 
 /// `expr is expr`
@@ -367,7 +367,7 @@ class IsExpr extends Expr {
   const IsExpr(this.left, this.right);
 
   @override
-  SmyValue evaluate(Frame f) => throw "is not implemented yet";
+  SmyValue evaluate(Frame f) => throw 'is not implemented yet';
 }
 
 /// `expr + expr`
@@ -469,7 +469,7 @@ class IndexExpr extends Expr {
       return value.values[index] ?? SmyValue.none;
     }
     if (index is SmyInt) {
-      int i = index.intValue;
+      var i = index.intValue;
       if (i < 0) i += length;
       if (i < 0 || i >= length) throw 'IndexError: index out of range';
       if (value is SmyString) {
@@ -478,8 +478,8 @@ class IndexExpr extends Expr {
       return value.iterable.skip(i).first;
     }
     final slice = (index as SmyTuple).values;
-    int i = slice[0] != SmyValue.none ? slice[0].intValue : 0;
-    int j = slice[1] != SmyValue.none ? slice[1].intValue : length;
+    var i = slice[0] != SmyValue.none ? slice[0].intValue : 0;
+    var j = slice[1] != SmyValue.none ? slice[1].intValue : length;
     if (slice[2] != SmyValue.none) throw 'slicing with step not yet implemented';
     if (i < 0) i += length;
     if (i < 0) i = 0;
@@ -500,7 +500,7 @@ class IndexExpr extends Expr {
   }
 
   @override
-  SmyValue assign(Frame f, value) => throw "[]= not implemented yet";
+  SmyValue assign(Frame f, value) => throw '[]= not implemented yet';
 
   @override
   bool get assignable => true;
@@ -564,10 +564,10 @@ class TupleExpr extends Expr {
   SmyValue assign(Frame f, SmyValue value) {
     final i = value.iterable.iterator;
     for (final e in exprs) {
-      if (!i.moveNext()) throw "ValueError: not enough values to unpack";
+      if (!i.moveNext()) throw 'ValueError: not enough values to unpack';
       e.assign(f, i.current);
     }
-    if (i.moveNext()) throw "ValueError: too many values to unpack";
+    if (i.moveNext()) throw 'ValueError: too many values to unpack';
     return value;
   }
 
@@ -594,8 +594,8 @@ class DictExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    Map<SmyValue, SmyValue> dict = {};
-    for (int i = 0; i < exprs.length; i += 2) {
+    final dict = <SmyValue, SmyValue>{};
+    for (var i = 0; i < exprs.length; i += 2) {
       dict[exprs[i].evaluate(f)] = exprs[i + 1].evaluate(f);
     }
     return SmyDict(dict);
@@ -608,7 +608,7 @@ class SetExpr extends Expr {
   const SetExpr(this.exprs);
 
   @override
-  SmyValue evaluate(Frame f) => throw "set not yet implemented";
+  SmyValue evaluate(Frame f) => throw 'set not yet implemented';
 }
 
 class _Break {}

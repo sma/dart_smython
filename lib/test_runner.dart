@@ -4,7 +4,7 @@ import 'package:smython/parser.dart';
 import 'package:smython/smython.dart';
 
 void run(String filename) {
-  int failures = 0;
+  var failures = 0;
   final report = stdout;
   final buffer = StringBuffer();
 
@@ -28,10 +28,10 @@ void run(String filename) {
         actual = '$e';
       }
       if (actual == expected) {
-        report.writeln("OK");
+        report.writeln('OK');
       } else {
-        report.writeln("Actual..: $actual");
-        report.writeln("Expected: $expected");
+        report.writeln('Actual..: $actual');
+        report.writeln('Expected: $expected');
         failures++;
       }
 

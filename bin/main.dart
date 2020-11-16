@@ -1,5 +1,5 @@
 import 'package:smython/test_runner.dart';
 
 void main() {
-  run("parser_tests.py");
+  run('parser_tests.py');
 }

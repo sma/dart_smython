@@ -3,27 +3,27 @@ export 'package:smython/token.dart';
 
 /// Returns an iteration of [Token]s from [source].
 Iterable<Token> tokenize(String source) sync* {
-  int curIndent = 0;
-  int newIndent = 0;
+  var curIndent = 0;
+  var newIndent = 0;
 
   // combine lines with trailing backslashes with following lines
-  source = source.replaceAll("\\\n", "");
+  source = source.replaceAll('\\\n', '');
 
   // assure that the source ends with a newline
-  source += "\n";
+  source += '\n';
 
   // compile the regular expression to tokenize the source
   final _regex = RegExp(
-    "^ *(?:#.*)?\n|#.*\$|(" // whitespace and comments
-        "^ +|" // indentation
-        "\n|" // newline
-        "\\d+(?:\\.\\d*)?|" // numbers
-        "\\w+|" // names
-        "[()\\[\\]{}:.,;]|" // syntax
-        "[+\\-*/%<>=]=?|!=|" // operators
-        "'(?:\\\\[n'\"\\\\]|[^'])*'|" // single-quote strings
-        "\"(?:\\\\[n'\"\\\\]|[^\"])*\"" // double-quote strings
-        ")",
+    '^ *(?:#.*)?\n|#.*\$|(' // whitespace and comments
+    '^ +|' // indentation
+    '\n|' // newline
+    '\\d+(?:\\.\\d*)?|' // numbers
+    '\\w+|' // names
+    '[()\\[\\]{}:.,;]|' // syntax
+    '[+\\-*/%<>=]=?|!=|' // operators
+    "'(?:\\\\[n'\"\\\\]|[^'])*'|" // single-quote strings
+    "\"(?:\\\\[n'\"\\\\]|[^\"])*\"" // double-quote strings
+    ')',
     multiLine: true,
   );
 

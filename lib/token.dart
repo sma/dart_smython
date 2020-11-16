@@ -33,8 +33,8 @@ class Token {
 
   /// Returns the line of the source code this token is at (1-based).
   int get line {
-    int line = 1;
-    for (int i = 0; i < _start; i++) {
+    var line = 1;
+    for (var i = 0; i < _start; i++) {
       if (_source[i] == '\n') line++;
     }
     return line;
@@ -48,11 +48,11 @@ class Token {
   @override
   String toString() => '«$value»';
 
-  static const indent = Token("!INDENT", 0, 7);
+  static const indent = Token('!INDENT', 0, 7);
 
-  static const dedent = Token("!DEDENT", 0, 7);
+  static const dedent = Token('!DEDENT', 0, 7);
 
-  static const eof = Token("!EOF", 0, 4);
+  static const eof = Token('!EOF', 0, 4);
 
   static String _unescape(String s) {
     // see scanner.dart for which string escapes are supported
@@ -63,35 +63,35 @@ class Token {
   }
 
   static const _keywords = {
-    "and",
-    "as",
-    "assert",
-    "break",
-    "class",
-    "continue",
-    "def",
-    //"del",
-    "elif",
-    "else",
-    "except",
-    "exec",
-    "finally",
-    "for",
-    "from",
-    "global",
-    "if",
-    "import",
-    "in",
-    "is",
-    "lambda",
-    "not",
-    "or",
-    "pass",
-    "raise",
-    "return",
-    "try",
-    "while",
-    "with",
-    "yield",
+    'and',
+    'as',
+    'assert',
+    'break',
+    'class',
+    'continue',
+    'def',
+    //'del',
+    'elif',
+    'else',
+    'except',
+    'exec',
+    'finally',
+    'for',
+    'from',
+    'global',
+    'if',
+    'import',
+    'in',
+    'is',
+    'lambda',
+    'not',
+    'or',
+    'pass',
+    'raise',
+    'return',
+    'try',
+    'while',
+    'with',
+    'yield',
   };
 }

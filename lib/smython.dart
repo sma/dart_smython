@@ -28,9 +28,9 @@ class Smython {
           return value.values.removeAt(index.value);
         }
         if (index is SmyTuple) {
-          int length = value.values.length;
-          int start = index.values[0].isNone ? 0 : index.values[0].intValue;
-          int end = index.values[1].isNone ? value.values.length : index.values[1].intValue;
+          final length = value.values.length;
+          var start = index.values[0].isNone ? 0 : index.values[0].intValue;
+          var end = index.values[1].isNone ? value.values.length : index.values[1].intValue;
           if (start < 0) start += length;
           if (end < 0) end += length;
           if (start >= end) return None;
@@ -304,7 +304,7 @@ class SmyClass extends SmyValue {
   @override
   SmyValue call(Frame f, List<SmyValue> args) {
     final object = SmyObject(this);
-    final init = findAttr("__init__");
+    final init = findAttr('__init__');
     if (init is SmyFunc) {
       init.call(f, <SmyValue>[object] + args);
     }
@@ -313,9 +313,9 @@ class SmyClass extends SmyValue {
 
   @override
   SmyValue getAttr(String name) {
-    if (name == "__name__") return _name;
-    if (name == "__superclass__") return _superclass ?? SmyValue.none;
-    if (name == "__dict__") return _dict;
+    if (name == '__name__') return _name;
+    if (name == '__superclass__') return _superclass ?? SmyValue.none;
+    if (name == '__dict__') return _dict;
     return super.getAttr(name);
   }
 }
@@ -331,8 +331,8 @@ class SmyObject extends SmyValue {
 
   @override
   SmyValue getAttr(String name) {
-    if (name == "__class__") return _class;
-    if (name == "__dict__") return _dict;
+    if (name == '__class__') return _class;
+    if (name == '__dict__') return _dict;
 
     final value1 = _dict.values[SmyString(name)];
     if (value1 != null) return value1;
@@ -381,8 +381,8 @@ class SmyFunc extends SmyValue {
   @override
   SmyValue call(Frame cf, List<SmyValue> args) {
     final f = Frame(df, {}, df.globals, df.builtins);
-    int j = 0;
-    for (int i = 0; i < params.length; i++) {
+    var j = 0;
+    for (var i = 0; i < params.length; i++) {
       f.locals[SmyString(params[i])] = i < args.length ? args[i] : defExprs[j++].evaluate(df);
     }
     return suite.evaluateAsFunc(f);

@@ -1,14 +1,14 @@
 /// Represents a piece of source code.
 ///
-/// Tokens are either keywords, NAMEs, NUMBERs, STRINGs, operators, syntax
+/// Tokens are either keywords, NAMEs, NUMBERs, STRINGs, operators, syntax,
 /// or synthesized INDENT, DEDENT, NEWLINE or EOF tokens. Currently, these
 /// syntheized tokens have no valid line number.
 class Token {
+  const Token(this._source, this._start, this._end);
+
   final String _source;
   final int _start;
   final int _end;
-
-  const Token(this._source, this._start, this._end);
 
   /// Returns the piece of source code this token represents.
   String get value => _source.substring(_start, _end);
@@ -22,8 +22,8 @@ class Token {
   /// Returns whether this token is a (positive) NUMBER.
   bool get isNumber => value.startsWith(RegExp('[0-9]'));
 
-  /// Returns whether this token is a STRING.
-  bool get isString => _source[_start] == '"' || _source[_start] == '\'';
+  /// Returns whether this token is a quoted STRING.
+  bool get isString => _source[_start] == '"' || _source[_start] == "'";
 
   /// Returns the token's numeric value (only valid if [isNumber] is true).
   int get number => int.parse(value);

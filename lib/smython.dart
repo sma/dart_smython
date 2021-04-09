@@ -57,12 +57,11 @@ class Smython {
 }
 
 const None = SmyValue.none;
-const True = SmyValue.trueValue;
-const False = SmyValue.falseValue;
 
+/// Returns the Smython value for a Dart [value].
 SmyValue make(dynamic value) {
-  if (value == null) return None;
-  if (value is bool) return value ? True : False;
+  if (value == null) return SmyNone();
+  if (value is bool) return SmyBool(value);
   if (value is int) return SmyInt(value);
   if (value is String) return SmyString(value);
   if (value is List<SmyValue>) return SmyList(value);
@@ -93,7 +92,7 @@ SmyValue make(dynamic value) {
 /// Some values have associated [intValue] or [doubleValue].
 /// Some values are callable ([call]).
 /// Some values are iterable ([iterable]).
-/// Those values have an associated length.
+/// Those values also have an associated length.
 /// Some values have attributes which can be get, set and/or deleted.
 ///
 abstract class SmyValue {
@@ -115,15 +114,15 @@ abstract class SmyValue {
   Map<SmyValue, SmyValue> get mapValue => throw 'TypeError: Not a dict';
 
   static const SmyNone none = SmyNone._();
-  static const SmyBool trueValue = SmyBool(true);
-  static const SmyBool falseValue = SmyBool(false);
+  static const SmyBool trueValue = SmyBool._(true);
+  static const SmyBool falseValue = SmyBool._(false);
 }
 
 /// `None` (singleton, equatable, hashable)
 class SmyNone extends SmyValue {
-  const SmyNone._();
-
   factory SmyNone() => SmyValue.none;
+
+  const SmyNone._();
 
   @override
   bool operator ==(dynamic other) => other is SmyNone;
@@ -143,8 +142,11 @@ class SmyNone extends SmyValue {
 
 /// `True` or `False` (singletons, equatable, hashable)
 class SmyBool extends SmyValue {
+  factory SmyBool(bool value) => value ? SmyValue.trueValue : SmyValue.falseValue;
+
+  const SmyBool._(this.value);
+
   final bool value;
-  const SmyBool(this.value);
 
   @override
   bool operator ==(dynamic other) => other is SmyBool && value == other.value;
@@ -161,14 +163,15 @@ class SmyBool extends SmyValue {
 
 /// `NUMBER` (equatable, hashable)
 class SmyInt extends SmyValue {
-  final int value;
   const SmyInt(this.value);
+  final int value;
 
   @override
   bool operator ==(dynamic other) => other is SmyInt && value == other.value;
 
   @override
   int get hashCode => value.hashCode;
+
   @override
   String toString() => '$value';
 
@@ -181,11 +184,11 @@ class SmyInt extends SmyValue {
 
 /// `STRING` (equatable, hashable)
 class SmyString extends SmyValue {
-  static Map<String, SmyString> interns = {};
-  static SmyString intern(String value) => interns.putIfAbsent(value, () => SmyString(value));
-
-  final String value;
   const SmyString(this.value);
+  final String value;
+
+  static final Map<String, SmyString> _interns = {};
+  static SmyString intern(String value) => _interns.putIfAbsent(value, () => SmyString(value));
 
   @override
   bool operator ==(dynamic other) => other is SmyString && value == other.value;
@@ -208,8 +211,8 @@ class SmyString extends SmyValue {
 
 /// `(expr, ...)`
 class SmyTuple extends SmyValue {
-  final List<SmyValue> values;
   const SmyTuple(this.values);
+  final List<SmyValue> values;
 
   @override
   String toString() {
@@ -230,8 +233,8 @@ class SmyTuple extends SmyValue {
 
 /// `[expr, ...]`
 class SmyList extends SmyValue {
-  final List<SmyValue> values;
   const SmyList(this.values);
+  final List<SmyValue> values;
 
   @override
   String toString() {
@@ -251,8 +254,8 @@ class SmyList extends SmyValue {
 
 /// `{expr: expr, ...}`
 class SmyDict extends SmyValue {
-  final Map<SmyValue, SmyValue> values;
   const SmyDict(this.values);
+  final Map<SmyValue, SmyValue> values;
 
   @override
   String toString() {
@@ -272,20 +275,26 @@ class SmyDict extends SmyValue {
 
 /// `{expr, ...}`
 class SmySet extends SmyValue {
-  final Set<SmyValue> values;
   const SmySet(this.values);
+  final Set<SmyValue> values;
 
   @override
   bool get boolValue => values.isNotEmpty;
+
+  @override
+  Iterable<SmyValue> get iterable => values;
+
+  @override
+  int get length => values.length;
 }
 
 /// `class name (super): ...`
 class SmyClass extends SmyValue {
+  SmyClass(this._name, this._superclass);
+
   final SmyString _name;
   final SmyClass? _superclass;
   final SmyDict _dict = SmyDict({});
-
-  SmyClass(this._name, this._superclass);
 
   Map<SmyValue, SmyValue> get methods => _dict.values;
 
@@ -321,10 +330,10 @@ class SmyClass extends SmyValue {
 }
 
 class SmyObject extends SmyValue {
+  SmyObject(this._class);
+
   final SmyClass _class;
   final SmyDict _dict = SmyDict({});
-
-  SmyObject(this._class);
 
   @override
   String toString() => '<${_class._name} object $hashCode>';
@@ -354,10 +363,10 @@ class SmyObject extends SmyValue {
 }
 
 class SmyMethod extends SmyValue {
+  SmyMethod(this.self, this.func);
+
   final SmyObject self;
   final SmyFunc func;
-
-  SmyMethod(this.self, this.func);
 
   @override
   SmyValue call(Frame f, List<SmyValue> args) {
@@ -367,13 +376,13 @@ class SmyMethod extends SmyValue {
 
 /// `def name(param, ...): ...`
 class SmyFunc extends SmyValue {
+  const SmyFunc(this.df, this.name, this.params, this.defExprs, this.suite);
+
   final Frame df;
   final SmyString name;
   final List<String> params;
   final List<Expr> defExprs;
   final Suite suite;
-
-  const SmyFunc(this.df, this.name, this.params, this.defExprs, this.suite);
 
   @override
   String toString() => '<function $name>';
@@ -381,8 +390,7 @@ class SmyFunc extends SmyValue {
   @override
   SmyValue call(Frame cf, List<SmyValue> args) {
     final f = Frame(df, {}, df.globals, df.builtins);
-    var j = 0;
-    for (var i = 0; i < params.length; i++) {
+    for (var i = 0, j = 0; i < params.length; i++) {
       f.locals[SmyString(params[i])] = i < args.length ? args[i] : defExprs[j++].evaluate(df);
     }
     return suite.evaluateAsFunc(f);
@@ -391,9 +399,10 @@ class SmyFunc extends SmyValue {
 
 /// builtin function like print or len
 class SmyBuiltin extends SmyValue {
+  const SmyBuiltin(this.name, this.func);
+
   final SmyString name;
   final SmyValue Function(Frame cf, List<SmyValue> args) func;
-  const SmyBuiltin(this.name, this.func);
 
   @override
   String toString() => '<built-in function $name>';
@@ -405,13 +414,16 @@ class SmyBuiltin extends SmyValue {
 // -------- Runtime --------
 
 class Frame {
+  Frame(this.parent, this.locals, this.globals, this.builtins);
+
   final Frame? parent;
   final Map<SmyValue, SmyValue> locals;
   final Map<SmyValue, SmyValue> globals;
   final Map<SmyValue, SmyValue> builtins;
 
-  Frame(this.parent, this.locals, this.globals, this.builtins);
-
+  /// Returns the value bound to [name] by first searching [locals],
+  /// then searching [globals], and last but not least searching the
+  /// [builtins]. Throws a `NameError` if [name] is unbound.
   SmyValue lookup(SmyString name) {
     if (locals.containsKey(name)) {
       return locals[name]!;

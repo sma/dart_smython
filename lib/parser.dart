@@ -28,6 +28,8 @@ import 'scanner.dart';
 ///
 /// Currently, Smython uses only `int` for numeric values.
 ///
+/// Also, indentation must use four spaces. TABs are not allowed.
+///
 /// EBNF Grammar:
 /// ```
 /// file_input: {NEWLINE | stmt} ENDMARKER
@@ -80,11 +82,11 @@ Suite parse(String source) {
 }
 
 class Parser {
-  final Iterator<Token> _iter;
-
   Parser(this._iter) {
     advance();
   }
+
+  final Iterator<Token> _iter;
 
   // -------- Helper --------
 
@@ -110,9 +112,9 @@ class Parser {
   }
 
   /// Constructs a syntax error with [message] and the current token.
-  /// It should also denote the line.
-  String syntaxError(String message) {
-    return 'SyntaxError: $message but found $token at line ${token.line}';
+  /// It should also denote the current token's line.
+  SyntaxError syntaxError(String message) {
+    return SyntaxError('$message but found $token at line ${token.line}');
   }
 
   // -------- Suite parsing --------
@@ -334,7 +336,7 @@ class Parser {
       // if (at('%=')) return ModAssignStmt(expr, parseTestOrListAsTuple());
       return ExprStmt(expr);
     }
-    return throw syntaxError('expected statement');
+    throw syntaxError('expected statement');
   }
 
   // -------- Expression parsing --------
@@ -581,4 +583,12 @@ class Parser {
     // return t.isName || t.isNumber || "+-([{\"'".contains(t.value[0]) || t.value == "not";
     return token.value.startsWith(RegExp('[-+\'"\\d([{]')) || token.isName || token.value == 'not';
   }
+}
+
+class SyntaxError implements Exception {
+  SyntaxError(this.message);
+  final String message;
+
+  @override
+  String toString() => 'SyntaxError: $message';
 }

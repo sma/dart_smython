@@ -47,7 +47,7 @@ void run(String filename) {
 String repr(dynamic value) {
   if (value == null) throw 'missing value';
   if (value is SmyString) {
-    return '\'${value.value.replaceAll('\\', '\\\\').replaceAll('\'', '\\\'').replaceAll('\n', '\\n')}\'';
+    return "'${value.value.replaceAll('\\', '\\\\').replaceAll('\'', '\\\'').replaceAll('\n', '\\n')}'";
   }
   return '$value';
 }

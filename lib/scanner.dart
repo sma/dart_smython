@@ -1,8 +1,13 @@
 import 'package:smython/token.dart';
 export 'package:smython/token.dart';
 
-/// Returns an iteration of [Token]s from [source].
+/// Returns an iterable of [Token]s tokenized from [source].
+/// 
+/// Code must be indented by exactly four spaces.
+/// TABs are not allowed.
+/// Open parentheses do not relax indentation rules.
 Iterable<Token> tokenize(String source) sync* {
+  // keep track of indentation
   var curIndent = 0;
   var newIndent = 0;
 
@@ -22,7 +27,7 @@ Iterable<Token> tokenize(String source) sync* {
     '[()\\[\\]{}:.,;]|' // syntax
     '[+\\-*/%<>=]=?|!=|' // operators
     "'(?:\\\\[n'\"\\\\]|[^'])*'|" // single-quote strings
-    "\"(?:\\\\[n'\"\\\\]|[^\"])*\"" // double-quote strings
+    '"(?:\\\\[n\'"\\\\]|[^"])*"' // double-quote strings
     ')',
     multiLine: true,
   );

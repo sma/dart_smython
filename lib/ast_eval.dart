@@ -2,9 +2,10 @@ import 'package:smython/smython.dart';
 
 // -------- Suite --------
 
+/// A suite of [Stmt]s.
 class Suite {
-  final List<Stmt> stmts;
   const Suite(this.stmts);
+  final List<Stmt> stmts;
 
   SmyValue evaluate(Frame f) {
     SmyValue result = SmyValue.none;
@@ -25,6 +26,7 @@ class Suite {
 
 // -------- Stmt --------
 
+/// A statement that can be executed.
 abstract class Stmt {
   const Stmt();
 
@@ -33,10 +35,10 @@ abstract class Stmt {
 
 /// `if test: thenSuite else: elseSuite`
 class IfStmt extends Stmt {
+  const IfStmt(this.test, this.thenSuite, this.elseSuite);
   final Expr test;
   final Suite thenSuite;
   final Suite elseSuite;
-  const IfStmt(this.test, this.thenSuite, this.elseSuite);
 
   @override
   SmyValue evaluate(Frame f) {
@@ -51,10 +53,10 @@ class IfStmt extends Stmt {
 
 /// `while test: suite else: elseSuite`
 class WhileStmt extends Stmt {
+  const WhileStmt(this.test, this.suite, this.elseSuite);
   final Expr test;
   final Suite suite;
   final Suite elseSuite;
-  const WhileStmt(this.test, this.suite, this.elseSuite);
 
   @override
   SmyValue evaluate(Frame f) {
@@ -71,11 +73,11 @@ class WhileStmt extends Stmt {
 
 /// `for target, ... in test, ...: suite else: suite`
 class ForStmt extends Stmt {
+  const ForStmt(this.target, this.items, this.suite, this.elseSuite);
   final Expr target;
   final Expr items;
   final Suite suite;
   final Suite elseSuite;
-  const ForStmt(this.target, this.items, this.suite, this.elseSuite);
 
   @override
   SmyValue evaluate(Frame f) {
@@ -94,8 +96,8 @@ class ForStmt extends Stmt {
 
 /// `try: suite finally: suite`
 class TryFinallyStmt extends Stmt {
-  final Suite suite, finallySuite;
   const TryFinallyStmt(this.suite, this.finallySuite);
+  final Suite suite, finallySuite;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -110,9 +112,9 @@ class TryFinallyStmt extends Stmt {
 
 /// `try: suite except test as name: suite else: suite`
 class TryExceptStmt extends Stmt {
+  const TryExceptStmt(this.trySuite, this.excepts, this.elseSuite);
   final Suite trySuite, elseSuite;
   final List<ExceptClause> excepts;
-  const TryExceptStmt(this.trySuite, this.excepts, this.elseSuite);
 
   @override
   SmyValue evaluate(Frame f) {
@@ -135,19 +137,19 @@ class TryExceptStmt extends Stmt {
 }
 
 class ExceptClause {
+  const ExceptClause(this.test, this.name, this.suite);
   final Expr? test;
   final String? name;
   final Suite suite;
-  const ExceptClause(this.test, this.name, this.suite);
 }
 
-/// `def name(param, ...): suite`
+/// `def name(param=def, ...): suite`
 class DefStmt extends Stmt {
+  const DefStmt(this.name, this.params, this.defs, this.suite);
   final String name;
   final List<String> params;
   final List<Expr> defs;
   final Suite suite;
-  const DefStmt(this.name, this.params, this.defs, this.suite);
 
   @override
   SmyValue evaluate(Frame f) {
@@ -158,10 +160,10 @@ class DefStmt extends Stmt {
 
 /// `class name (super): suite`
 class ClassStmt extends Stmt {
+  const ClassStmt(this.name, this.superExpr, this.suite);
   final String name;
   final Expr superExpr;
   final Suite suite;
-  const ClassStmt(this.name, this.superExpr, this.suite);
 
   @override
   SmyValue evaluate(Frame f) {
@@ -197,8 +199,8 @@ class BreakStmt extends Stmt {
 
 /// `return`, `return test, ...`
 class ReturnStmt extends Stmt {
-  final Expr expr;
   const ReturnStmt(this.expr);
+  final Expr expr;
 
   @override
   SmyValue evaluate(Frame f) => throw _Return(expr.evaluate(f));
@@ -206,16 +208,17 @@ class ReturnStmt extends Stmt {
 
 /// `raise`, `raise test`
 class RaiseStmt extends Stmt {
-  final Expr expr;
   const RaiseStmt(this.expr);
+  final Expr expr;
 
   @override
   SmyValue evaluate(Frame f) => throw _Raise(expr.evaluate(f));
 }
 
+/// `expr`
 class ExprStmt extends Stmt {
-  final Expr expr;
   const ExprStmt(this.expr);
+  final Expr expr;
 
   @override
   SmyValue evaluate(Frame f) => expr.evaluate(f);
@@ -223,8 +226,8 @@ class ExprStmt extends Stmt {
 
 /// `target = test, ...`
 class AssignStmt extends Stmt {
-  final Expr lhs, rhs;
   const AssignStmt(this.lhs, this.rhs);
+  final Expr lhs, rhs;
 
   @override
   SmyValue evaluate(Frame f) => lhs.assign(f, rhs.evaluate(f));
@@ -232,6 +235,8 @@ class AssignStmt extends Stmt {
 
 // -------- Expr --------
 
+/// An expression can be evaluated.
+/// It might be assignable in which case it can be assigned to.
 abstract class Expr {
   const Expr();
 
@@ -246,8 +251,8 @@ abstract class Expr {
 
 /// _expr_ `if` _test_ `else` _test_
 class CondExpr extends Expr {
-  final Expr test, thenExpr, elseExpr;
   const CondExpr(this.test, this.thenExpr, this.elseExpr);
+  final Expr test, thenExpr, elseExpr;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -257,8 +262,8 @@ class CondExpr extends Expr {
 
 /// expr `or` expr
 class OrExpr extends Expr {
-  final Expr left, right;
   const OrExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -268,8 +273,8 @@ class OrExpr extends Expr {
 
 /// expr `and` expr
 class AndExpr extends Expr {
-  final Expr left, right;
   const AndExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -279,8 +284,8 @@ class AndExpr extends Expr {
 
 /// `not expr`
 class NotExpr extends Expr {
-  final Expr expr;
   const NotExpr(this.expr);
+  final Expr expr;
 
   @override
   SmyValue evaluate(Frame f) => SmyBool(!expr.evaluate(f).boolValue);
@@ -288,8 +293,8 @@ class NotExpr extends Expr {
 
 /// `expr == expr`
 class EqExpr extends Expr {
-  final Expr left, right;
   const EqExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -299,8 +304,8 @@ class EqExpr extends Expr {
 
 /// `expr >= expr`
 class GeExpr extends Expr {
-  final Expr left, right;
   const GeExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -310,8 +315,8 @@ class GeExpr extends Expr {
 
 /// `expr > expr`
 class GtExpr extends Expr {
-  final Expr left, right;
   const GtExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -321,8 +326,8 @@ class GtExpr extends Expr {
 
 /// `expr <= expr`
 class LeExpr extends Expr {
-  final Expr left, right;
   const LeExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -332,8 +337,8 @@ class LeExpr extends Expr {
 
 /// `expr < expr`
 class LtExpr extends Expr {
-  final Expr left, right;
   const LtExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -343,8 +348,8 @@ class LtExpr extends Expr {
 
 /// `expr != expr`
 class NeExpr extends Expr {
-  final Expr left, right;
   const NeExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -354,8 +359,8 @@ class NeExpr extends Expr {
 
 /// `expr in expr`
 class InExpr extends Expr {
-  final Expr left, right;
   const InExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) => throw 'in not implemented yet';
@@ -363,8 +368,8 @@ class InExpr extends Expr {
 
 /// `expr is expr`
 class IsExpr extends Expr {
-  final Expr left, right;
   const IsExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) => throw 'is not implemented yet';
@@ -372,8 +377,8 @@ class IsExpr extends Expr {
 
 /// `expr + expr`
 class AddExpr extends Expr {
-  final Expr left, right;
   const AddExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -383,8 +388,8 @@ class AddExpr extends Expr {
 
 /// `expr - expr`
 class SubExpr extends Expr {
-  final Expr left, right;
   const SubExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -394,8 +399,8 @@ class SubExpr extends Expr {
 
 /// `expr * expr`
 class MulExpr extends Expr {
-  final Expr left, right;
   const MulExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -405,8 +410,8 @@ class MulExpr extends Expr {
 
 /// `expr / expr`
 class DivExpr extends Expr {
-  final Expr left, right;
   const DivExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -416,8 +421,8 @@ class DivExpr extends Expr {
 
 /// `expr % expr`
 class ModExpr extends Expr {
-  final Expr left, right;
   const ModExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -427,8 +432,8 @@ class ModExpr extends Expr {
 
 /// `+expr`
 class PosExpr extends Expr {
-  final Expr expr;
   const PosExpr(this.expr);
+  final Expr expr;
 
   @override
   SmyValue evaluate(Frame f) => expr.evaluate(f);
@@ -436,8 +441,8 @@ class PosExpr extends Expr {
 
 /// `-expr`
 class NegExpr extends Expr {
-  final Expr expr;
   const NegExpr(this.expr);
+  final Expr expr;
 
   @override
   SmyValue evaluate(Frame f) => SmyInt(-expr.evaluate(f).intValue);
@@ -445,9 +450,9 @@ class NegExpr extends Expr {
 
 /// `expr(args, ...)`
 class CallExpr extends Expr {
+  const CallExpr(this.expr, this.args);
   final Expr expr;
   final List<Expr> args;
-  const CallExpr(this.expr, this.args);
 
   @override
   SmyValue evaluate(Frame f) {
@@ -457,8 +462,8 @@ class CallExpr extends Expr {
 
 /// `expr[expr]`
 class IndexExpr extends Expr {
-  final Expr left, right;
   const IndexExpr(this.left, this.right);
+  final Expr left, right;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -508,9 +513,9 @@ class IndexExpr extends Expr {
 
 /// `expr.NAME`
 class AttrExpr extends Expr {
+  const AttrExpr(this.expr, this.name);
   final Expr expr;
   final String name;
-  const AttrExpr(this.expr, this.name);
 
   @override
   SmyValue evaluate(Frame f) {
@@ -528,8 +533,8 @@ class AttrExpr extends Expr {
 
 /// `NAME`
 class VarExpr extends Expr {
-  final SmyString name;
   const VarExpr(this.name);
+  final SmyString name;
 
   @override
   SmyValue evaluate(Frame f) => f.lookup(name);
@@ -543,8 +548,8 @@ class VarExpr extends Expr {
 
 /// `None`, `True`, `False`, `NUMBER`, `STRING`
 class LitExpr extends Expr {
-  final SmyValue value;
   const LitExpr(this.value);
+  final SmyValue value;
 
   @override
   SmyValue evaluate(Frame f) => value;
@@ -552,8 +557,8 @@ class LitExpr extends Expr {
 
 /// `()`, `(expr,)`, `(expr, ...)`
 class TupleExpr extends Expr {
-  final List<Expr> exprs;
   const TupleExpr(this.exprs);
+  final List<Expr> exprs;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -577,8 +582,8 @@ class TupleExpr extends Expr {
 
 /// `[]`, `[expr, ...]`
 class ListExpr extends Expr {
-  final List<Expr> exprs;
   const ListExpr(this.exprs);
+  final List<Expr> exprs;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -589,8 +594,8 @@ class ListExpr extends Expr {
 
 /// `{}`, `{expr: expr, ...}`
 class DictExpr extends Expr {
-  final List<Expr> exprs;
   const DictExpr(this.exprs);
+  final List<Expr> exprs;
 
   @override
   SmyValue evaluate(Frame f) {
@@ -604,21 +609,24 @@ class DictExpr extends Expr {
 
 /// `{expr, ...}`
 class SetExpr extends Expr {
-  final List<Expr> exprs;
   const SetExpr(this.exprs);
+  final List<Expr> exprs;
 
   @override
   SmyValue evaluate(Frame f) => throw 'set not yet implemented';
 }
 
+/// Implements breaking loops.
 class _Break {}
 
+/// Implements returning from functions.
 class _Return {
-  final SmyValue value;
   _Return(this.value);
+  final SmyValue value;
 }
 
+/// Implements raising exceptions.
 class _Raise {
-  final SmyValue value;
   _Raise(this.value);
+  final SmyValue value;
 }

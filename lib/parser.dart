@@ -1,13 +1,9 @@
-import 'package:smython/smython.dart';
-
-import 'ast_eval.dart';
-import 'scanner.dart';
-
-/// Parses **Smython**, a programming language similar to a subset of Python 3.
+/// Parses Smython source, a programming language similar to a subset of
+/// Python 3 that is barely capable of running the factorial function.
 ///
 /// Here is a simple example:
 ///
-/// ```py
+/// ```
 /// def fac(n):
 ///     if n == 0: return 1
 ///     return n * fac(n - 1)
@@ -21,16 +17,17 @@ import 'scanner.dart';
 /// `del`, `import`, `global`, `nonlocal`, `assert` or `yield` statements,
 /// no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`, no `continue`
 /// in loops, no `from` clause in `raise`, no `with` statement, no combined
-/// `try`/`except`/`finally`, no multiple inheritance in classes, no lambdas,
-/// no `<>`, `@`, `//`, `&`, `|`, `^`, `<<`, `>>` or `~` operators, no `await`,
-/// no list or dict comprehension, no `...`, no list in `[ ` but only a single
-/// value or slice, no tripple-quoted, byte or raw string, only unicode one.
+/// `try`/`except`/`finally`, no multiple inheritance in classes, no
+/// lambdas, no `<>`, `@`, `//`, `&`, `|`, `^`, `<<`, `>>` or `~` operators,
+/// no `await`, no list or dict comprehension, no `...`, no list in `[ `
+/// but only a single value or slice, no tripple-quoted, byte, or raw
+/// strings, only unicode ones.
 ///
 /// Currently, Smython uses only `int` for numeric values.
 ///
 /// Also, indentation must use four spaces. TABs are not allowed.
 ///
-/// EBNF Grammar:
+/// ## EBNF Grammar:
 /// ```
 /// file_input: {NEWLINE | stmt} ENDMARKER
 ///
@@ -77,10 +74,20 @@ import 'scanner.dart';
 /// ```
 ///
 /// Parsing may throw a syntax error.
+library parser;
+
+import 'ast_eval.dart';
+import 'scanner.dart';
+import 'smython.dart';
+
+/// Parses [source] into an AST. See library header for details.
 Suite parse(String source) {
   return Parser(tokenize(source).iterator).parseFileInput();
 }
 
+/// Parses a sequence of tokens into an AST.
+/// 
+/// This is a handcrafted LL(1) recursive descent parser.
 class Parser {
   Parser(this._iter) {
     advance();
@@ -105,21 +112,22 @@ class Parser {
     return false;
   }
 
-  /// Consumes the current token if and only if its value is [value] and throws
-  /// a syntax error otherwise.
+  /// Consumes the current token if and only if its value is [value] and
+  /// throws a [SyntaxError] otherwise.
   void expect(String value) {
     if (!at(value)) throw syntaxError('expected $value');
   }
 
   /// Constructs a syntax error with [message] and the current token.
-  /// It should also denote the current token's line.
+  /// It should also denote the current token's line. Hopefully the
+  /// current token is never a synthesized token.
   SyntaxError syntaxError(String message) {
-    return SyntaxError('$message but found $token at line ${token.line}');
+    return SyntaxError('$message but found ${token == Token.eof ? 'end of input' : '$token'} at line ${token.line}');
   }
 
   // -------- Suite parsing --------
 
-  // file_input: {NEWLINE | stmt} ENDMARKER
+  /// `file_input: {NEWLINE | stmt} ENDMARKER`
   Suite parseFileInput() {
     final stmts = <Stmt>[];
     while (!at(Token.eof.value)) {
@@ -128,7 +136,7 @@ class Parser {
     return Suite(stmts);
   }
 
-  // suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
+  /// `suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT`
   Suite parseSuite() {
     if (at('\n')) {
       expect(Token.indent.value);
@@ -143,7 +151,7 @@ class Parser {
 
   // -------- Statement parsing --------
 
-  // stmt: simple_stmt | compound_stmt
+  /// `stmt: simple_stmt | compound_stmt`
   List<Stmt> parseStmt() {
     final stmt = parseCompoundStmtOpt();
     if (stmt != null) return [stmt];
@@ -152,7 +160,7 @@ class Parser {
 
   // -------- Compount statement parsing --------
 
-  // compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
+  /// `compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef`
   Stmt? parseCompoundStmtOpt() {
     if (at('if')) return parseIfStmt();
     if (at('while')) return parseWhileStmt();
@@ -163,14 +171,14 @@ class Parser {
     return null;
   }
 
-  // if_stmt: 'if' test ':' suite {'elif' test ':' suite} ['else' ':' suite]
+  /// `if_stmt: 'if' test ':' suite {'elif' test ':' suite} ['else' ':' suite]`
   Stmt parseIfStmt() {
     final test = parseTest();
     expect(':');
     return IfStmt(test, parseSuite(), _parseIfStmtCont());
   }
 
-  // private: ['elif' test ':' suite | 'else' ':' suite]
+  /// private: `['elif' test ':' suite | 'else' ':' suite]`
   Suite _parseIfStmtCont() {
     if (at('elif')) {
       final test = parseTest();
@@ -180,7 +188,7 @@ class Parser {
     return _parseElse();
   }
 
-  // private: ['else' ':' suite]
+  /// private: `['else' ':' suite]`
   Suite _parseElse() {
     if (at('else')) {
       expect(':');
@@ -189,14 +197,14 @@ class Parser {
     return Suite([const PassStmt()]);
   }
 
-  // while_stmt: 'while' test ':' suite ['else' ':' suite]
+  /// `while_stmt: 'while' test ':' suite ['else' ':' suite]`
   Stmt parseWhileStmt() {
     final test = parseTest();
     expect(':');
     return WhileStmt(test, parseSuite(), _parseElse());
   }
 
-  // for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
+  /// `for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]`
   Stmt parseForStmt() {
     final target = parseExprOrListAsTuple();
     expect('in');
@@ -205,7 +213,7 @@ class Parser {
     return ForStmt(target, iter, parseSuite(), _parseElse());
   }
 
-  // exprlist: expr {',' expr} [',']
+  /// `exprlist: expr {',' expr} [',']`
   Expr parseExprOrListAsTuple() {
     final expr = parseExpr();
     if (!at(',')) return expr;
@@ -217,7 +225,7 @@ class Parser {
     return TupleExpr(exprs);
   }
 
-  // try_stmt: 'try' ':' suite (except_clause {except_clause} ['else' ':' suite] | 'finally' ':' suite)
+  /// `try_stmt: 'try' ':' suite (except_clause {except_clause} ['else' ':' suite] | 'finally' ':' suite)`
   Stmt parseTryStmt() {
     expect(':');
     final trySuite = parseSuite();
@@ -233,7 +241,7 @@ class Parser {
     return TryExceptStmt(trySuite, excepts, _parseElse());
   }
 
-  // except_clause: 'except' [test ['as' NAME]] ':' suite
+  /// `except_clause: 'except' [test ['as' NAME]] ':' suite`
   ExceptClause _parseExceptClause() {
     Expr? test;
     String? name;
@@ -247,7 +255,7 @@ class Parser {
     return ExceptClause(test, name, parseSuite());
   }
 
-  // funcdef: 'def' NAME parameters ':' suite
+  /// `funcdef: 'def' NAME parameters ':' suite`
   Stmt parseFuncDef() {
     final name = parseName();
     final defExprs = <Expr>[];
@@ -256,7 +264,7 @@ class Parser {
     return DefStmt(name, params, defExprs, parseSuite());
   }
 
-  // parameters: '(' [parameter {',' parameter} [',']] ')'
+  /// `parameters: '(' [parameter {',' parameter} [',']] ')'`
   List<String> parseParameters(List<Expr> defExprs) {
     final params = <String>[];
     expect('(');
@@ -270,14 +278,14 @@ class Parser {
     return params;
   }
 
-  // parameter: NAME ['=' test]
+  /// `parameter: NAME ['=' test]`
   String parseParameter(List<Expr> defExprs) {
     final name = parseName();
     if (at('=')) defExprs.add(parseTest());
     return name;
   }
 
-  // classdef: 'class' NAME ['(' [test] ')'] ':' suite
+  /// `classdef: 'class' NAME ['(' [test] ')'] ':' suite`
   Stmt parseClassDef() {
     final name = parseName();
     Expr superExpr = const LitExpr(SmyValue.none);
@@ -293,7 +301,7 @@ class Parser {
 
   // -------- Simple statement parsing --------
 
-  // simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
+  /// `simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE`
   List<Stmt> parseSimpleStmt() {
     final stmts = <Stmt>[parseSmallStmt()];
     while (at(';')) {
@@ -304,8 +312,8 @@ class Parser {
     return stmts;
   }
 
-  // small_stmt: expr_stmt | pass_stmt | flow_stmt
-  // flow_stmt: break_stmt | return_stmt | raise_stmt
+  /// `small_stmt: expr_stmt | pass_stmt | flow_stmt`
+  /// `flow_stmt: break_stmt | return_stmt | raise_stmt`
   Stmt parseSmallStmt() {
     if (at('pass')) return const PassStmt();
     if (at('break')) return const BreakStmt();
@@ -314,17 +322,17 @@ class Parser {
     return parseExprStmt();
   }
 
-  // return_stmt: 'return' [testlist]
+  /// `return_stmt: 'return' [testlist]`
   Stmt parseReturnStmt() {
     return ReturnStmt(hasTest ? parseTestOrListAsTuple() : const LitExpr(SmyValue.none));
   }
 
-  // raise_stmt: 'raise' [test]
+  /// `raise_stmt: 'raise' [test]`
   Stmt parseRaiseStmt() {
     return RaiseStmt(hasTest ? parseTest() : const LitExpr(SmyValue.none));
   }
 
-  // expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]
+  /// `expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]`
   Stmt parseExprStmt() {
     if (hasTest) {
       final expr = parseTestOrListAsTuple();
@@ -341,7 +349,7 @@ class Parser {
 
   // -------- Expression parsing --------
 
-  // test: or_test ['if' or_test 'else' test]
+  /// `test: or_test ['if' or_test 'else' test]`
   Expr parseTest() {
     final expr = parseOrTest();
     if (at('if')) {
@@ -352,7 +360,7 @@ class Parser {
     return expr;
   }
 
-  // or_test: and_test {'or' and_test}
+  /// `or_test: and_test {'or' and_test}`
   Expr parseOrTest() {
     var expr = parseAndTest();
     while (at('or')) {
@@ -361,7 +369,7 @@ class Parser {
     return expr;
   }
 
-  // and_test: not_test {'and' not_test}
+  /// `and_test: not_test {'and' not_test}`
   Expr parseAndTest() {
     var expr = parseNotTest();
     while (at('and')) {
@@ -370,13 +378,13 @@ class Parser {
     return expr;
   }
 
-  // not_test: 'not' not_test | comparison
+  /// `not_test: 'not' not_test | comparison`
   Expr parseNotTest() {
     if (at('not')) return NotExpr(parseNotTest());
     return parseComparison();
   }
 
-  // comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]
+  /// `comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]`
   Expr parseComparison() {
     final expr = parseExpr();
     if (at('<')) return LtExpr(expr, parseExpr());
@@ -397,7 +405,7 @@ class Parser {
     return expr;
   }
 
-  // expr: term {('+'|'-') term}
+  /// `expr: term {('+'|'-') term}`
   Expr parseExpr() {
     var expr = parseTerm();
     while (true) {
@@ -412,7 +420,7 @@ class Parser {
     return expr;
   }
 
-  // term: factor {('*'|'/'|'%') factor}
+  /// `term: factor {('*'|'/'|'%') factor}`
   Expr parseTerm() {
     var expr = parseFactor();
     while (true) {
@@ -429,14 +437,14 @@ class Parser {
     return expr;
   }
 
-  // factor: ('+'|'-') factor | power
+  /// `factor: ('+'|'-') factor | power`
   Expr parseFactor() {
     if (at('+')) return PosExpr(parseFactor());
     if (at('-')) return NegExpr(parseFactor());
     return parsePower();
   }
 
-  // power: atom {trailer}
+  /// `power: atom {trailer}`
   Expr parsePower() {
     var expr = parseAtom();
     // trailer: '(' [testlist] ')' | '[' subscript ']' | '.' NAME
@@ -456,7 +464,7 @@ class Parser {
     return expr;
   }
 
-  // subscript: test | [test] ':' [test] [':' [test]]
+  /// `subscript: test | [test] ':' [test] [':' [test]]`
   Expr parseSubscript() {
     Expr start;
     final none = const LitExpr(SmyValue.none);
@@ -472,7 +480,7 @@ class Parser {
     return CallExpr(const VarExpr(SmyString('slice')), [start, stop, step]);
   }
 
-  // atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictorsetmaker] '}' | NAME | NUMBER | STRING+
+  /// `atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictorsetmaker] '}' | NAME | NUMBER | STRING+`
   Expr parseAtom() {
     if (at('(')) return _parseTupleMaker();
     if (at('[')) return _parseListMaker();
@@ -517,7 +525,7 @@ class Parser {
     return ListExpr(exprs);
   }
 
-  // dictorsetmaker: test ':' test {',' test ':' test} [','] | testlist
+  /// `dictorsetmaker: test ':' test {',' test ':' test} [','] | testlist`
   Expr _parseDictOrSetMaker() {
     if (at('}')) return const DictExpr([]);
     final expr = parseTest();
@@ -541,7 +549,7 @@ class Parser {
     }
   }
 
-  // NAME
+  /// `NAME`
   String parseName() {
     final t = token;
     if (t.isName) {
@@ -553,7 +561,7 @@ class Parser {
 
   // -------- Expression list parsing --------
 
-  // testlist: test {',' test} [',']
+  /// `testlist: test {',' test} [',']`
   Expr parseTestOrListAsTuple() {
     final test = parseTest();
     if (!at(',')) return test;
@@ -562,7 +570,7 @@ class Parser {
     return TupleExpr(tests);
   }
 
-  // testlist: test {',' test} [',']
+  /// `testlist: test {',' test} [',']`
   List<Expr> parseTestListOpt() {
     final exprs = <Expr>[];
     if (hasTest) {
@@ -585,6 +593,7 @@ class Parser {
   }
 }
 
+/// Denotes a parsing error.
 class SyntaxError implements Exception {
   SyntaxError(this.message);
   final String message;

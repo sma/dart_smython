@@ -1,8 +1,12 @@
+/// The [Token] class is used by the scanner to split the source code
+/// into chunks that are then processed by the parser.
+library token;
+
 /// Represents a piece of source code.
 ///
 /// Tokens are either keywords, NAMEs, NUMBERs, STRINGs, operators, syntax,
-/// or synthesized INDENT, DEDENT, NEWLINE or EOF tokens. Currently, these
-/// syntheized tokens have no valid line number.
+/// or synthesized INDENT, DEDENT, NEWLINE, or EOF tokens. Currently, these
+/// synthesized tokens have no valid line number.
 class Token {
   const Token(this._source, this._start, this._end);
 
@@ -48,10 +52,13 @@ class Token {
   @override
   String toString() => '«$value»';
 
+  /// A synthetic token representing an indentation in the next line.
   static const indent = Token('!INDENT', 0, 7);
 
+  /// A synthetic token representing a dedentation in the next line.
   static const dedent = Token('!DEDENT', 0, 7);
 
+  /// A synthetic token representing the end of the input.
   static const eof = Token('!EOF', 0, 4);
 
   static String _unescape(String s) {

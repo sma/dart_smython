@@ -1,11 +1,14 @@
-import 'package:smython/token.dart';
-export 'package:smython/token.dart';
+/// Splits source code into tokens.
+library scanner;
+
+import 'token.dart';
+export 'token.dart';
 
 /// Returns an iterable of [Token]s tokenized from [source].
-/// 
-/// Code must be indented by exactly four spaces.
-/// TABs are not allowed.
-/// Open parentheses do not relax indentation rules.
+///
+/// * Code must be indented by exactly four spaces.
+/// * TABs are not allowed.
+/// * Open parentheses do not relax indentation rules.
 Iterable<Token> tokenize(String source) sync* {
   // keep track of indentation
   var curIndent = 0;

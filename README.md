@@ -11,4 +11,8 @@ and [Java](https://github.com/sma/smython3).
 ## Running the Code
 
 To run the included test suite, execute `dart pub get` once and then simply
-execute `dart run`. If should print `OK` for all code snippets.
+execute `dart run`. It should print `OK` for all code snippets run.
+
+## Using Smython
+
+Include the `smython/smython.dart` library in your program.

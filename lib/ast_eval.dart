@@ -1,3 +1,13 @@
+/// AST nodes represent a Smython program and can be evaluated.
+///
+/// A [Suite] is a sequential list of statements.
+/// [Stmt] is the abstract superclass for all statements.
+/// [Expr] is the abstract superclass for all expressions.
+/// 
+/// All nodes have a `evaluate(Frame)` method.
+/// Some expressions also support `assign(Frame,SmyValue)`.
+library ast_eval;
+
 import 'package:smython/smython.dart';
 
 // -------- Suite --------
@@ -136,6 +146,7 @@ class TryExceptStmt extends Stmt {
   }
 }
 
+/// `except test as name: suite` (part of [TryExceptStmt])
 class ExceptClause {
   const ExceptClause(this.test, this.name, this.suite);
   final Expr? test;
@@ -236,7 +247,7 @@ class AssignStmt extends Stmt {
 // -------- Expr --------
 
 /// An expression can be evaluated.
-/// It might be assignable in which case it can be assigned to.
+/// It might be [assignable] in which case it can be [assign]ed to.
 abstract class Expr {
   const Expr();
 

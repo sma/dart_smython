@@ -1,3 +1,15 @@
+/// The runtime system for Smython.
+/// 
+/// Create a new [Smython] instance to run code. It has a small but
+/// extendable number of builtin function. Use [Smython.builtin] to add
+/// your own. Use [Smython.execute] to run Smython code.
+/// 
+/// To learn more about the syntax, see `parser.dart`.
+/// 
+/// See [SmyValue] for how Smython values are represented in Dart. Use
+/// [make] to convert a Dart value into a [SmyValue] instance.
+library smython;
+
 import 'ast_eval.dart';
 import 'parser.dart';
 
@@ -56,6 +68,7 @@ class Smython {
   }
 }
 
+/// The global value representing no other value.
 const None = SmyValue.none;
 
 /// Returns the Smython value for a Dart [value].
@@ -81,7 +94,7 @@ SmyValue make(dynamic value) {
 /// - [SmyList] represents lists (mutable growable arrays)
 /// - [SmyDict] represents dicts (mutable hash maps)
 /// - [SmySet] represents sets (mutable hash sets)
-/// - [SmyBultin] represents built-in functions
+/// - [SmyBuiltin] represents built-in functions
 /// - [SmyFunc] represents user defined functions
 /// - [SmyMethod] represents methods
 /// - [SmyObject] represents objects
@@ -329,6 +342,7 @@ class SmyClass extends SmyValue {
   }
 }
 
+/// class instance
 class SmyObject extends SmyValue {
   SmyObject(this._class);
 
@@ -362,6 +376,7 @@ class SmyObject extends SmyValue {
   }
 }
 
+/// instance method
 class SmyMethod extends SmyValue {
   SmyMethod(this.self, this.func);
 
@@ -413,6 +428,7 @@ class SmyBuiltin extends SmyValue {
 
 // -------- Runtime --------
 
+/// Runtime state passed to all AST node when evaluating them.
 class Frame {
   Frame(this.parent, this.locals, this.globals, this.builtins);
 

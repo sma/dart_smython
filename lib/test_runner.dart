@@ -1,8 +1,22 @@
+/// A test runner.
+///
+/// Lines starting with `#` and empty lines are ignored. Lines starting
+/// with `>>>` or `...` are stripped from the the prefix, combined and then
+/// executed as Symthon code, comparing the result of the last expressions
+/// to the next non-empty, non-comment line without a prefix after using
+/// [repr] to convert the result into a string representation.
+///
+/// Then either `OK` is printed or both the actual and the expected value.
+///
+/// After running all tests, the number of failures is printed.
+library test_runner;
+
 import 'dart:io';
 
-import 'package:smython/parser.dart';
-import 'package:smython/smython.dart';
+import 'parser.dart';
+import 'smython.dart';
 
+/// Runs the Smython test suite loaded from [filename].
 void run(String filename) {
   var failures = 0;
   final report = stdout;
@@ -44,10 +58,25 @@ void run(String filename) {
   }
 }
 
-String repr(dynamic value) {
+/// Returns a canonical string prepresentation of the given [value] that
+/// can be used to compare a computed value to a stringified value from the
+/// the suite. Strings are therefore displayed always with single quotes.
+/// Sets and dictionaries are displayed after sorting their keys first.
+/// Then sets, dictionaries, and lists are recursively displayed using
+/// [repr]. All other values are displayed using their `toString` method.
+String repr(SmyValue? value) {
   if (value == null) throw 'missing value';
   if (value is SmyString) {
     return "'${value.value.replaceAll('\\', '\\\\').replaceAll('\'', '\\\'').replaceAll('\n', '\\n')}'";
+  } else if (value is SmyTuple) {
+    return '(${value.values.map(repr).join(', ')}${value.length == 1 ? ',' : ''})';
+  } else if (value is SmyList) {
+    return '[${value.values.map(repr).join(', ')}]';
+  } else if (value is SmySet) {
+    return '{${value.values.map(repr).toList()..sort()}}';
+  } else if (value is SmyDict) {
+    final v = value.values.entries.map((e) => MapEntry(repr(e.key), repr(e.value))).toList();
+    return '{${(v..sort((a, b) => a.key.compareTo(b.key))).map((e) => '${e.key}: ${e.value}').join(', ')}}';
   }
   return '$value';
 }

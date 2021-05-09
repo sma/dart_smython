@@ -32,7 +32,7 @@
 /// stmt: simple_stmt | compound_stmt
 /// simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
 /// small_stmt: expr_stmt | pass_stmt | flow_stmt | assert_stmt
-/// expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]
+/// expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '|=' | '&=' | '=') testlist]
 /// pass_stmt: 'pass'
 /// flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt
 /// break_stmt: 'break'
@@ -347,11 +347,13 @@ class Parser {
     if (hasTest) {
       final expr = parseTestOrListAsTuple();
       if (at('=')) return AssignStmt(expr, parseTestOrListAsTuple());
-      // if (at('+=')) return AddAssignStmt(expr, parseTestOrListAsTuple());
-      // if (at('-=')) return SubAssignStmt(expr, parseTestOrListAsTuple());
-      // if (at('*=')) return MulAssignStmt(expr, parseTestOrListAsTuple());
-      // if (at('/=')) return DivAssignStmt(expr, parseTestOrListAsTuple());
-      // if (at('%=')) return ModAssignStmt(expr, parseTestOrListAsTuple());
+      if (at('+=')) return AddAssignStmt(expr, parseTest());
+      if (at('-=')) return SubAssignStmt(expr, parseTest());
+      if (at('*=')) return MulAssignStmt(expr, parseTest());
+      if (at('/=')) return DivAssignStmt(expr, parseTest());
+      if (at('%=')) return ModAssignStmt(expr, parseTest());
+      if (at('|=')) return OrAssignStmt(expr, parseTest());
+      if (at('&=')) return AndAssignStmt(expr, parseTest());
       return ExprStmt(expr);
     }
     throw syntaxError('expected statement');

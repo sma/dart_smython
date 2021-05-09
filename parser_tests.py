@@ -21,7 +21,7 @@
 >>> 2*3
 6
 >>> 9/3
-3
+3.0
 >>> 1+2*3
 7
 >>> (1+2)*3
@@ -298,3 +298,16 @@ SyntaxError: expected NAME but found "A" at line 1
 AssertionError
 >>> assert False, "message"
 AssertionError: message
+
+# augmented assigns
+>>> a, b, c, d = 1, 2, 4, 8
+... a += 5
+... b -= 5
+... c *= 3
+... d /= 2
+... (a, b, c, d)
+(6, -3, 12, 4.0)
+>>> a = 17; a %= 7; a
+3
+>>> a = 192; a &= 224; a |= 130; a
+194

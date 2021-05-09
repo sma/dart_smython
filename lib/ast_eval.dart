@@ -272,6 +272,50 @@ class AssignStmt extends Stmt {
   SmyValue evaluate(Frame f) => lhs.assign(f, rhs.evaluate(f));
 }
 
+abstract class AugAssignStmt extends Stmt {
+  const AugAssignStmt(this.lhs, this.rhs, this.op);
+  final Expr lhs, rhs;
+  final SmyValue Function(SmyValue, SmyValue) op;
+
+  @override
+  SmyValue evaluate(Frame f) => lhs.assign(f, op(lhs.evaluate(f), rhs.evaluate(f)));
+}
+
+/// `target += test`
+class AddAssignStmt extends AugAssignStmt {
+  const AddAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.add);
+}
+
+/// `target -= test`
+class SubAssignStmt extends AugAssignStmt {
+  const SubAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.sub);
+}
+
+/// `target *= test`
+class MulAssignStmt extends AugAssignStmt {
+  const MulAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.mul);
+}
+
+/// `target /= test`
+class DivAssignStmt extends AugAssignStmt {
+  const DivAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.div);
+}
+
+/// `target %= test, ...`
+class ModAssignStmt extends AugAssignStmt {
+  const ModAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.mod);
+}
+
+/// `target |= test`
+class OrAssignStmt extends AugAssignStmt {
+  const OrAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.or);
+}
+
+/// `target &= test`
+class AndAssignStmt extends AugAssignStmt {
+  const AndAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.and);
+}
+
 // -------- Expr --------
 
 /// An expression can be evaluated.
@@ -286,6 +330,15 @@ abstract class Expr {
 
   /// Returns whether [assign] can be called on this node.
   bool get assignable => false;
+
+  // default arithmetic & bit operations
+  static SmyValue add(SmyValue l, SmyValue r) => SmyNum(l.numValue + r.numValue);
+  static SmyValue sub(SmyValue l, SmyValue r) => SmyNum(l.numValue - r.numValue);
+  static SmyValue mul(SmyValue l, SmyValue r) => SmyNum(l.numValue * r.numValue);
+  static SmyValue div(SmyValue l, SmyValue r) => SmyNum(l.numValue / r.numValue);
+  static SmyValue mod(SmyValue l, SmyValue r) => SmyNum(l.numValue % r.numValue);
+  static SmyValue or(SmyValue l, SmyValue r) => SmyNum(l.intValue | r.intValue);
+  static SmyValue and(SmyValue l, SmyValue r) => SmyNum(l.intValue & r.intValue);
 }
 
 /// _expr_ `if` _test_ `else` _test_
@@ -421,7 +474,7 @@ class BitOrExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyNum(left.evaluate(f).intValue | right.evaluate(f).intValue);
+    return Expr.or(left.evaluate(f), right.evaluate(f));
   }
 }
 
@@ -432,7 +485,7 @@ class BitAndExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyNum(left.evaluate(f).intValue & right.evaluate(f).intValue);
+    return Expr.and(left.evaluate(f), right.evaluate(f));
   }
 }
 
@@ -443,7 +496,7 @@ class AddExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyNum(left.evaluate(f).numValue + right.evaluate(f).numValue);
+    return Expr.add(left.evaluate(f), right.evaluate(f));
   }
 }
 
@@ -454,7 +507,7 @@ class SubExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyNum(left.evaluate(f).numValue - right.evaluate(f).numValue);
+    return Expr.sub(left.evaluate(f), right.evaluate(f));
   }
 }
 
@@ -465,7 +518,7 @@ class MulExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyNum(left.evaluate(f).numValue * right.evaluate(f).numValue);
+    return Expr.mul(left.evaluate(f), right.evaluate(f));
   }
 }
 
@@ -476,7 +529,7 @@ class DivExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyNum(left.evaluate(f).numValue ~/ right.evaluate(f).numValue);
+    return Expr.div(left.evaluate(f), right.evaluate(f));
   }
 }
 
@@ -487,7 +540,7 @@ class ModExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyNum(left.evaluate(f).numValue % right.evaluate(f).numValue);
+    return Expr.mod(left.evaluate(f), right.evaluate(f));
   }
 }
 
@@ -679,6 +732,9 @@ class SetExpr extends Expr {
 
 /// Implements breaking loops.
 class _Break {}
+
+/// Implements continuing loops.
+class _Continue {}
 
 /// Implements returning from functions.
 class _Return {

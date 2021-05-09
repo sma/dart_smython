@@ -11,7 +11,9 @@
 library smython;
 
 import 'ast_eval.dart';
-import 'parser.dart';
+import 'parser.dart' show parse;
+
+export 'parser.dart' show parse;
 
 /// Main entry point.
 class Smython {

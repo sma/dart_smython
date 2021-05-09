@@ -238,6 +238,15 @@ class RaiseStmt extends Stmt {
   SmyValue evaluate(Frame f) => throw _Raise(expr.evaluate(f));
 }
 
+/// `global NAME, ...`
+class GlobalStmt extends Stmt {
+  const GlobalStmt(this.names);
+  final List<String> names;
+
+  @override
+  SmyValue evaluate(Frame f) => throw UnimplementedError();
+}
+
 /// `assert test`, `assert test, test`
 class AssertStmt extends Stmt {
   const AssertStmt(this.expr, this.message);

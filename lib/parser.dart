@@ -31,7 +31,7 @@
 ///
 /// stmt: simple_stmt | compound_stmt
 /// simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
-/// small_stmt: expr_stmt | pass_stmt | flow_stmt | assert_stmt
+/// small_stmt: expr_stmt | pass_stmt | flow_stmt | global_stmt | assert_stmt
 /// expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '|=' | '&=' | '=') testlist]
 /// pass_stmt: 'pass'
 /// flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt
@@ -39,6 +39,7 @@
 /// continue_stmt: 'continue'
 /// return_stmt: 'return' [testlist]
 /// raise_stmt: 'raise' [test]
+/// global_stmt: 'global' NAME {',' NAME}
 /// assert_stmt: 'assert' test [',' test]
 /// compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
 /// if_stmt: 'if' test ':' suite {'elif' test ':' suite} ['else' ':' suite]
@@ -314,14 +315,15 @@ class Parser {
     return stmts;
   }
 
-  /// `small_stmt: expr_stmt | pass_stmt | flow_stmt`
-  /// `flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt | assert_stmt`
+  /// `small_stmt: expr_stmt | pass_stmt | flow_stmt | global_stmt | assert_stmt`
+  /// `flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt`
   Stmt parseSmallStmt() {
     if (at('pass')) return const PassStmt();
     if (at('break')) return const BreakStmt();
     if (at('continue')) return const ContinueStmt();
     if (at('return')) return parseReturnStmt();
     if (at('raise')) return parseRaiseStmt();
+    if (at('global')) return parseGlobalStmt();
     if (at('assert')) return parseAssertStmt();
     return parseExprStmt();
   }
@@ -334,6 +336,15 @@ class Parser {
   /// `raise_stmt: 'raise' [test]`
   Stmt parseRaiseStmt() {
     return RaiseStmt(hasTest ? parseTest() : const LitExpr(SmyValue.none));
+  }
+
+  /// `global_stmt: 'global' NAME {',' NAME}`
+  Stmt parseGlobalStmt() {
+    final names = [parseName()];
+    while (at(',')) {
+      names.add(parseName());
+    }
+    return GlobalStmt(names);
   }
 
   /// `assert_stmt: 'assert' test [',' test]`

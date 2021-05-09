@@ -18,12 +18,10 @@
 /// no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`, no `continue`
 /// in loops, no `from` clause in `raise`, no `with` statement, no combined
 /// `try`/`except`/`finally`, no multiple inheritance in classes, no
-/// lambdas, no `<>`, `@`, `//`, `&`, `|`, `^`, `<<`, `>>` or `~` operators,
+/// lambdas, no `<>`, `@`, `//`, `^`, `<<`, `>>` or `~` operators,
 /// no `await`, no list or dict comprehension, no `...`, no list in `[ `
 /// but only a single value or slice, no tripple-quoted, byte, or raw
 /// strings, only unicode ones.
-///
-/// Currently, Smython uses only `int` for numeric values.
 ///
 /// Also, indentation must use four spaces. TABs are not allowed.
 ///
@@ -62,7 +60,9 @@
 /// and_test: not_test {'and' not_test}
 /// not_test: 'not' not_test | comparison
 /// comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]
-/// expr: term {('+'|'-') term}
+/// expr: and_expr {'|' and_expr}
+/// and_expr: arith_expr {'&' arith_expr}
+/// arith_expr: term {('+'|'-') term}
 /// term: factor {('*'|'/'|'%') factor}
 /// factor: ('+'|'-') factor | power
 /// power: atom {trailer}
@@ -413,8 +413,26 @@ class Parser {
     return expr;
   }
 
-  /// `expr: term {('+'|'-') term}`
+  /// `expr: and_expr {'|' and_expr}`
   Expr parseExpr() {
+    var expr = parseAndExpr();
+    while (at('|')) {
+      expr = BitOrExpr(expr, parseAndExpr());
+    }
+    return expr;
+  }
+
+  /// `and_expr: arith_expr {'&' arith_expr}`
+  Expr parseAndExpr() {
+    var expr = parseArithExpr();
+    while (at('&')) {
+      expr = BitAndExpr(expr, parseArithExpr());
+    }
+    return expr;
+  }
+
+  /// `arith_expr: term {('+'|'-') term}`
+  Expr parseArithExpr() {
     var expr = parseTerm();
     while (true) {
       if (at('+')) {

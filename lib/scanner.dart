@@ -31,7 +31,7 @@ Iterable<Token> tokenize(String source) sync* {
     '\\d+(?:\\.\\d*)?|' // numbers
     '\\w+|' // names
     '[()\\[\\]{}:.,;]|' // syntax
-    '[+\\-*/%<>=]=?|!=|' // operators
+    '[+\\-*/%<>=|&]=?|!=|' // operators
     "'(?:\\\\[n'\"\\\\]|[^'])*'|" // single-quote strings
     '"(?:\\\\[n\'"\\\\]|[^"])*"' // double-quote strings
     ')',

@@ -402,6 +402,28 @@ class IsExpr extends Expr {
   SmyValue evaluate(Frame f) => throw 'is not implemented yet';
 }
 
+/// `expr | expr`
+class BitOrExpr extends Expr {
+  const BitOrExpr(this.left, this.right);
+  final Expr left, right;
+
+  @override
+  SmyValue evaluate(Frame f) {
+    return SmyNum(left.evaluate(f).intValue | right.evaluate(f).intValue);
+  }
+}
+
+/// `expr & expr`
+class BitAndExpr extends Expr {
+  const BitAndExpr(this.left, this.right);
+  final Expr left, right;
+
+  @override
+  SmyValue evaluate(Frame f) {
+    return SmyNum(left.evaluate(f).intValue & right.evaluate(f).intValue);
+  }
+}
+
 /// `expr + expr`
 class AddExpr extends Expr {
   const AddExpr(this.left, this.right);

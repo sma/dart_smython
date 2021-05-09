@@ -263,3 +263,10 @@ SyntaxError: expected NEWLINE but found 1 at line 1
 >>> class "A"
 SyntaxError: expected NAME but found "A" at line 1
 
+# assert
+>>> assert True
+>>> assert True, "message"
+>>> assert False
+AssertionError
+>>> assert False, "message"
+AssertionError: message

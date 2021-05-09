@@ -3,7 +3,7 @@
 /// A [Suite] is a sequential list of statements.
 /// [Stmt] is the abstract superclass for all statements.
 /// [Expr] is the abstract superclass for all expressions.
-/// 
+///
 /// All nodes have a `evaluate(Frame)` method.
 /// Some expressions also support `assign(Frame,SmyValue)`.
 library ast_eval;
@@ -224,6 +224,22 @@ class RaiseStmt extends Stmt {
 
   @override
   SmyValue evaluate(Frame f) => throw _Raise(expr.evaluate(f));
+}
+
+/// `assert test`, `assert test, test`
+class AssertStmt extends Stmt {
+  const AssertStmt(this.expr, this.message);
+  final Expr expr;
+  final Expr? message;
+
+  @override
+  SmyValue evaluate(Frame f) {
+    if (!expr.evaluate(f).boolValue) {
+      final m = message?.evaluate(f).stringValue;
+      throw make(m == null ? 'AssertionError' : 'AssertionError: $m');
+    }
+    return SmyValue.none;
+  }
 }
 
 /// `expr`

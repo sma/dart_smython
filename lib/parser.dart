@@ -14,7 +14,7 @@
 ///
 /// Smython has no decorators, `async` functions, typed function parameters,
 /// function keyword arguments, argument spatting with `*` or `**`, no
-/// `del`, `import`, `global`, `nonlocal`, `assert` or `yield` statements,
+/// `del`, `import`, `global`, `nonlocal`, or `yield` statements,
 /// no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`, no `continue`
 /// in loops, no `from` clause in `raise`, no `with` statement, no combined
 /// `try`/`except`/`finally`, no multiple inheritance in classes, no
@@ -33,13 +33,14 @@
 ///
 /// stmt: simple_stmt | compound_stmt
 /// simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
-/// small_stmt: expr_stmt | pass_stmt | flow_stmt
+/// small_stmt: expr_stmt | pass_stmt | flow_stmt | assert_stmt
 /// expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]
 /// pass_stmt: 'pass'
 /// flow_stmt: break_stmt | return_stmt | raise_stmt
 /// break_stmt: 'break'
 /// return_stmt: 'return' [testlist]
 /// raise_stmt: 'raise' [test]
+/// assert_stmt: 'assert' test [',' test]
 /// compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
 /// if_stmt: 'if' test ':' suite {'elif' test ':' suite} ['else' ':' suite]
 /// while_stmt: 'while' test ':' suite ['else' ':' suite]
@@ -86,7 +87,7 @@ Suite parse(String source) {
 }
 
 /// Parses a sequence of tokens into an AST.
-/// 
+///
 /// This is a handcrafted LL(1) recursive descent parser.
 class Parser {
   Parser(this._iter) {
@@ -313,12 +314,13 @@ class Parser {
   }
 
   /// `small_stmt: expr_stmt | pass_stmt | flow_stmt`
-  /// `flow_stmt: break_stmt | return_stmt | raise_stmt`
+  /// `flow_stmt: break_stmt | return_stmt | raise_stmt | assert_stmt`
   Stmt parseSmallStmt() {
     if (at('pass')) return const PassStmt();
     if (at('break')) return const BreakStmt();
     if (at('return')) return parseReturnStmt();
     if (at('raise')) return parseRaiseStmt();
+    if (at('assert')) return parseAssertStmt();
     return parseExprStmt();
   }
 
@@ -330,6 +332,12 @@ class Parser {
   /// `raise_stmt: 'raise' [test]`
   Stmt parseRaiseStmt() {
     return RaiseStmt(hasTest ? parseTest() : const LitExpr(SmyValue.none));
+  }
+
+  /// `assert_stmt: 'assert' test [',' test]`
+  Stmt parseAssertStmt() {
+    final test = parseTest();
+    return AssertStmt(test, at(',') ? parseTest() : null);
   }
 
   /// `expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]`

@@ -238,6 +238,25 @@ class RaiseStmt extends Stmt {
   SmyValue evaluate(Frame f) => throw _Raise(expr.evaluate(f));
 }
 
+/// `import NAME, ...`
+class ImportNameStmt extends Stmt {
+  const ImportNameStmt(this.names);
+  final List<List<String>> names;
+
+  @override
+  SmyValue evaluate(Frame f) => throw UnimplementedError();
+}
+
+/// `from NAME import NAME, ...`
+class FromImportStmt extends Stmt {
+  const FromImportStmt(this.module, this.names);
+  final String module;
+  final List<List<String>> names;
+
+  @override
+  SmyValue evaluate(Frame f) => throw UnimplementedError();
+}
+
 /// `global NAME, ...`
 class GlobalStmt extends Stmt {
   const GlobalStmt(this.names);

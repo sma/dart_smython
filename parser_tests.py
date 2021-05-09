@@ -311,3 +311,19 @@ AssertionError: message
 3
 >>> a = 192; a &= 224; a |= 130; a
 194
+
+# imports
+>>> import a
+UnimplementedError
+>>> import a as x
+UnimplementedError
+>>> import a, b,
+UnimplementedError
+>>> import a, b as x
+UnimplementedError
+>>> from a import *
+UnimplementedError
+>>> from a import a
+UnimplementedError
+>>> from a import a, b as x, c,
+UnimplementedError

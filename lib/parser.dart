@@ -31,7 +31,7 @@
 ///
 /// stmt: simple_stmt | compound_stmt
 /// simple_stmt: small_stmt {';' small_stmt} [';'] NEWLINE
-/// small_stmt: expr_stmt | pass_stmt | flow_stmt | global_stmt | assert_stmt
+/// small_stmt: expr_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | assert_stmt
 /// expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '|=' | '&=' | '=') testlist]
 /// pass_stmt: 'pass'
 /// flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt
@@ -39,6 +39,11 @@
 /// continue_stmt: 'continue'
 /// return_stmt: 'return' [testlist]
 /// raise_stmt: 'raise' [test]
+/// import_stmt: import_name | import_from
+/// import_name: 'import' import_as_names
+/// import_from: 'from' NAME 'import' ('*' | import_as_names)
+/// import_as_names: import_as_name {',' import_as_name} [',']
+/// import_as_name: NAME ['as' NAME]
 /// global_stmt: 'global' NAME {',' NAME}
 /// assert_stmt: 'assert' test [',' test]
 /// compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | funcdef | classdef
@@ -315,14 +320,17 @@ class Parser {
     return stmts;
   }
 
-  /// `small_stmt: expr_stmt | pass_stmt | flow_stmt | global_stmt | assert_stmt`
+  /// `small_stmt: expr_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | assert_stmt`
   /// `flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt`
+  /// `import_stmt: import_name | import_from`
   Stmt parseSmallStmt() {
     if (at('pass')) return const PassStmt();
     if (at('break')) return const BreakStmt();
     if (at('continue')) return const ContinueStmt();
     if (at('return')) return parseReturnStmt();
     if (at('raise')) return parseRaiseStmt();
+    if (at('import')) return parseImportName();
+    if (at('from')) return parseFromImport();
     if (at('global')) return parseGlobalStmt();
     if (at('assert')) return parseAssertStmt();
     return parseExprStmt();
@@ -336,6 +344,40 @@ class Parser {
   /// `raise_stmt: 'raise' [test]`
   Stmt parseRaiseStmt() {
     return RaiseStmt(hasTest ? parseTest() : const LitExpr(SmyValue.none));
+  }
+
+  /// `import_name: 'import' import_as_names`
+  Stmt parseImportName() {
+    return ImportNameStmt(_parseImportAsNames());
+  }
+
+  /// `import_from: 'from' NAME 'import' ('*' | import_as_names)`
+  Stmt parseFromImport() {
+    final module = parseName();
+    expect('import');
+    if (at('*')) {
+      return FromImportStmt(module, []);
+    }
+    return FromImportStmt(module, _parseImportAsNames());
+  }
+
+  /// `import_as_names: import_as_name {',' import_as_name} [',']`
+  List<List<String>> _parseImportAsNames() {
+    final names = [_parseImportAsName()];
+    while (at(',')) {
+      if (token.value == '\n') break;
+      names.add(_parseImportAsName());
+    }
+    return names;
+  }
+
+  /// `import_as_name: NAME ['as' NAME]`
+  List<String> _parseImportAsName() {
+    final name = [parseName()];
+    if (at('as')) {
+      name.add(parseName());
+    }
+    return name;
   }
 
   /// `global_stmt: 'global' NAME {',' NAME}`
@@ -353,7 +395,7 @@ class Parser {
     return AssertStmt(test, at(',') ? parseTest() : null);
   }
 
-  /// `expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]`
+  /// `expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '|=' | '&=' | '=') testlist]`
   Stmt parseExprStmt() {
     if (hasTest) {
       final expr = parseTestOrListAsTuple();

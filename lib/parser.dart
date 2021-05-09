@@ -15,8 +15,8 @@
 /// Smython has no decorators, `async` functions, typed function parameters,
 /// function keyword arguments, argument spatting with `*` or `**`, no
 /// `del`, `import`, `global`, `nonlocal`, or `yield` statements,
-/// no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`, no `continue`
-/// in loops, no `from` clause in `raise`, no `with` statement, no combined
+/// no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`,
+/// no `from` clause in `raise`, no `with` statement, no combined
 /// `try`/`except`/`finally`, no multiple inheritance in classes, no
 /// lambdas, no `<>`, `@`, `//`, `^`, `<<`, `>>` or `~` operators,
 /// no `await`, no list or dict comprehension, no `...`, no list in `[ `
@@ -34,8 +34,9 @@
 /// small_stmt: expr_stmt | pass_stmt | flow_stmt | assert_stmt
 /// expr_stmt: testlist [('+=' | '-=' | '*=' | '/=' | '%=' | '=') testlist]
 /// pass_stmt: 'pass'
-/// flow_stmt: break_stmt | return_stmt | raise_stmt
+/// flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt
 /// break_stmt: 'break'
+/// continue_stmt: 'continue'
 /// return_stmt: 'return' [testlist]
 /// raise_stmt: 'raise' [test]
 /// assert_stmt: 'assert' test [',' test]
@@ -314,10 +315,11 @@ class Parser {
   }
 
   /// `small_stmt: expr_stmt | pass_stmt | flow_stmt`
-  /// `flow_stmt: break_stmt | return_stmt | raise_stmt | assert_stmt`
+  /// `flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt | assert_stmt`
   Stmt parseSmallStmt() {
     if (at('pass')) return const PassStmt();
     if (at('break')) return const BreakStmt();
+    if (at('continue')) return const ContinueStmt();
     if (at('return')) return parseReturnStmt();
     if (at('raise')) return parseRaiseStmt();
     if (at('assert')) return parseAssertStmt();

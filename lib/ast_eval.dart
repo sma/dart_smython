@@ -75,6 +75,8 @@ class WhileStmt extends Stmt {
         suite.evaluate(f);
       } on _Break {
         return SmyValue.none;
+      } on _Continue {
+        continue;
       }
     }
     return elseSuite.evaluate(f);
@@ -98,6 +100,8 @@ class ForStmt extends Stmt {
         suite.evaluate(f);
       } on _Break {
         return SmyValue.none;
+      } on _Continue {
+        continue;
       }
     }
     return elseSuite.evaluate(f);
@@ -206,6 +210,14 @@ class BreakStmt extends Stmt {
 
   @override
   SmyValue evaluate(Frame f) => throw _Break();
+}
+
+/// `continue`
+class ContinueStmt extends Stmt {
+  const ContinueStmt();
+
+  @override
+  SmyValue evaluate(Frame f) => throw _Continue();
 }
 
 /// `return`, `return test, ...`

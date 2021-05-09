@@ -64,6 +64,13 @@ False
 ...     a = 0
 >>> a
 1
+>>> a = 0
+... while True:
+...     a = a + 1
+...     if a == 1: continue
+...     break
+... a
+2
 
 # for loop
 >>> s = 0
@@ -81,6 +88,13 @@ False
 ... else: s = 0
 >>> s
 3
+>>> s = 0
+... for i in 1, 2, 3:
+...     s = 1
+...     continue
+...     s = 2
+... s
+1
 
 # complex if
 >>> a=1

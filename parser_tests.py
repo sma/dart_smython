@@ -263,6 +263,16 @@ SyntaxError: expected NEWLINE but found 1 at line 1
 >>> class "A"
 SyntaxError: expected NAME but found "A" at line 1
 
+# no INDENT/DEDENT/NEWLINE inside of parentheses
+>>> a = [1,
+...      2]
+... a
+[1, 2]
+>>> a = {
+...     1: 2,
+... }
+{1: 2}
+
 # assert
 >>> assert True
 >>> assert True, "message"

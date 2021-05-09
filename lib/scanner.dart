@@ -14,6 +14,9 @@ Iterable<Token> tokenize(String source) sync* {
   var curIndent = 0;
   var newIndent = 0;
 
+  // keep track of open parens and brackets to supress indentation
+  var parens = 0;
+
   // combine lines with trailing backslashes with following lines
   source = source.replaceAll('\\\n', '');
 
@@ -41,11 +44,11 @@ Iterable<Token> tokenize(String source) sync* {
     if (s == null) continue;
     if (s[0] == ' ') {
       // compute new indentation which is applied before the next non-whitespace token
-      newIndent = s.length ~/ 4;
+      if (parens == 0) newIndent = s.length ~/ 4;
     } else {
       if (s[0] == '\n') {
         // reset indentation
-        newIndent = 0;
+        if (parens == 0) newIndent = 0;
       } else {
         // found a non-whitespace token, apply new indentation
         while (curIndent < newIndent) {
@@ -57,6 +60,9 @@ Iterable<Token> tokenize(String source) sync* {
           curIndent--;
         }
       }
+      if (parens > 0 && s == '\n') continue;
+      if (s == '(' || s == '[' || s == '{') parens++;
+      if (s == ')' || s == ']' || s == '}') parens--;
       // add newline or non-whitespace token to result
       yield Token(match.input, match.start, match.end);
     }

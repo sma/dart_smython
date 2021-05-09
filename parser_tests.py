@@ -327,3 +327,9 @@ UnimplementedError
 UnimplementedError
 >>> from a import a, b as x, c,
 UnimplementedError
+
+# complex comparison
+>>> 1 < 4 < 5
+True
+>>> 1 < 1 < 5, 1 < 5 < 5
+(False, False)

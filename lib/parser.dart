@@ -66,7 +66,7 @@
 /// or_test: and_test {'or' and_test}
 /// and_test: not_test {'and' not_test}
 /// not_test: 'not' not_test | comparison
-/// comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]
+/// comparison: expr {('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr}
 /// expr: and_expr {'|' and_expr}
 /// and_expr: arith_expr {'&' arith_expr}
 /// arith_expr: term {('+'|'-') term}
@@ -449,24 +449,39 @@ class Parser {
     return parseComparison();
   }
 
-  /// `comparison: expr [('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr]`
+  /// `comparison: expr {('<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is' ['not']) expr}`
   Expr parseComparison() {
     final expr = parseExpr();
-    if (at('<')) return LtExpr(expr, parseExpr());
-    if (at('>')) return GtExpr(expr, parseExpr());
-    if (at('==')) return EqExpr(expr, parseExpr());
-    if (at('>=')) return GeExpr(expr, parseExpr());
-    if (at('<=')) return LeExpr(expr, parseExpr());
-    if (at('!=')) return NeExpr(expr, parseExpr());
-    if (at('in')) return InExpr(expr, parseExpr());
-    if (at('not')) {
-      expect('in');
-      return NotExpr(InExpr(expr, parseExpr()));
+    final ops = <CompOp>[];
+    while (true) {
+      if (at('<')) {
+        ops.add(CompOp(CompOp.lt, parseExpr()));
+      } else if (at('>')) {
+        ops.add(CompOp(CompOp.gt, parseExpr()));
+      } else if (at('==')) {
+        ops.add(CompOp(CompOp.eq, parseExpr()));
+      } else if (at('>=')) {
+        ops.add(CompOp(CompOp.ge, parseExpr()));
+      } else if (at('<=')) {
+        ops.add(CompOp(CompOp.le, parseExpr()));
+      } else if (at('!=') || at('<>')) {
+        ops.add(CompOp(CompOp.ne, parseExpr()));
+      } else if (at('in')) {
+        ops.add(CompOp(CompOp.in_, parseExpr()));
+      } else if (at('not')) {
+        expect('in');
+        ops.add(CompOp(CompOp.notin, parseExpr()));
+      } else if (at('is')) {
+        if (at('not')) {
+          ops.add(CompOp(CompOp.notis, parseExpr()));
+        } else {
+          ops.add(CompOp(CompOp.is_, parseExpr()));
+        }
+      } else {
+        break;
+      }
     }
-    if (at('is')) {
-      if (at('not')) return NotExpr(IsExpr(expr, parseExpr()));
-      return IsExpr(expr, parseExpr());
-    }
+    if (ops.isNotEmpty) return Comparison(expr, ops);
     return expr;
   }
 

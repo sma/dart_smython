@@ -411,88 +411,40 @@ class NotExpr extends Expr {
   SmyValue evaluate(Frame f) => SmyBool(!expr.evaluate(f).boolValue);
 }
 
-/// `expr == expr`
-class EqExpr extends Expr {
-  const EqExpr(this.left, this.right);
-  final Expr left, right;
+/// `expr < expr`, `expr < expr < expr`
+class CompOp {
+  CompOp(this.op, this.right);
+  final bool Function(SmyValue, SmyValue) op;
+  final Expr right;
+
+  static bool eq(SmyValue l, SmyValue r) => l == r;
+  static bool ne(SmyValue l, SmyValue r) => !eq(l, r);
+  static bool lt(SmyValue l, SmyValue r) => l.numValue < r.numValue;
+  static bool gt(SmyValue l, SmyValue r) => l.numValue > r.numValue;
+  static bool le(SmyValue l, SmyValue r) => l.numValue <= r.numValue;
+  static bool ge(SmyValue l, SmyValue r) => l.numValue >= r.numValue;
+
+  static bool in_(SmyValue l, SmyValue r) => throw UnimplementedError();
+  static bool notin(SmyValue l, SmyValue r) => !in_(l, r);
+  static bool is_(SmyValue l, SmyValue r) => throw UnimplementedError();
+  static bool notis(SmyValue l, SmyValue r) => !is_(l, r);
+}
+
+class Comparison extends Expr {
+  Comparison(this.left, this.ops);
+  final Expr left;
+  final List<CompOp> ops;
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f) == right.evaluate(f));
+    var l = left.evaluate(f);
+    for (final op in ops) {
+      final r = op.right.evaluate(f);
+      if (!op.op(l, r)) return SmyBool(false);
+      l = r;
+    }
+    return SmyBool(true);
   }
-}
-
-/// `expr >= expr`
-class GeExpr extends Expr {
-  const GeExpr(this.left, this.right);
-  final Expr left, right;
-
-  @override
-  SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f).numValue >= right.evaluate(f).numValue);
-  }
-}
-
-/// `expr > expr`
-class GtExpr extends Expr {
-  const GtExpr(this.left, this.right);
-  final Expr left, right;
-
-  @override
-  SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f).numValue > right.evaluate(f).numValue);
-  }
-}
-
-/// `expr <= expr`
-class LeExpr extends Expr {
-  const LeExpr(this.left, this.right);
-  final Expr left, right;
-
-  @override
-  SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f).numValue <= right.evaluate(f).numValue);
-  }
-}
-
-/// `expr < expr`
-class LtExpr extends Expr {
-  const LtExpr(this.left, this.right);
-  final Expr left, right;
-
-  @override
-  SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f).numValue < right.evaluate(f).numValue);
-  }
-}
-
-/// `expr != expr`
-class NeExpr extends Expr {
-  const NeExpr(this.left, this.right);
-  final Expr left, right;
-
-  @override
-  SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f) != right.evaluate(f));
-  }
-}
-
-/// `expr in expr`
-class InExpr extends Expr {
-  const InExpr(this.left, this.right);
-  final Expr left, right;
-
-  @override
-  SmyValue evaluate(Frame f) => throw 'in not implemented yet';
-}
-
-/// `expr is expr`
-class IsExpr extends Expr {
-  const IsExpr(this.left, this.right);
-  final Expr left, right;
-
-  @override
-  SmyValue evaluate(Frame f) => throw 'is not implemented yet';
 }
 
 /// `expr | expr`

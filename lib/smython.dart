@@ -1,11 +1,11 @@
 /// The runtime system for Smython.
-/// 
+///
 /// Create a new [Smython] instance to run code. It has a small but
 /// extendable number of builtin function. Use [Smython.builtin] to add
 /// your own. Use [Smython.execute] to run Smython code.
-/// 
+///
 /// To learn more about the syntax, see `parser.dart`.
-/// 
+///
 /// See [SmyValue] for how Smython values are represented in Dart. Use
 /// [make] to convert a Dart value into a [SmyValue] instance.
 library smython;
@@ -25,7 +25,7 @@ class Smython {
     });
     builtin('len', (Frame cf, List<SmyValue> args) {
       if (args.length != 1) throw 'TypeError: len() takes 1 argument (${args.length} given)';
-      return SmyInt(args[0].length);
+      return SmyNum(args[0].length);
     });
     builtin('slice', (Frame f, List<SmyValue> args) {
       if (args.length != 3) throw 'TypeError: slice() takes 3 arguments (${args.length} given)';
@@ -36,13 +36,13 @@ class Smython {
       final value = args[0];
       final index = args[1];
       if (value is SmyList) {
-        if (index is SmyInt) {
-          return value.values.removeAt(index.value);
+        if (index is SmyNum) {
+          return value.values.removeAt(index.index);
         }
         if (index is SmyTuple) {
           final length = value.values.length;
-          var start = index.values[0].isNone ? 0 : index.values[0].intValue;
-          var end = index.values[1].isNone ? value.values.length : index.values[1].intValue;
+          var start = index.values[0].isNone ? 0 : index.values[0].index;
+          var end = index.values[1].isNone ? value.values.length : index.values[1].index;
           if (start < 0) start += length;
           if (end < 0) end += length;
           if (start >= end) return None;
@@ -75,7 +75,7 @@ const None = SmyValue.none;
 SmyValue make(dynamic value) {
   if (value == null) return SmyNone();
   if (value is bool) return SmyBool(value);
-  if (value is int) return SmyInt(value);
+  if (value is num) return SmyNum(value);
   if (value is String) return SmyString(value);
   if (value is List<SmyValue>) return SmyList(value);
   if (value is Map<SmyValue, SmyValue>) return SmyDict(value);
@@ -87,8 +87,7 @@ SmyValue make(dynamic value) {
 ///
 /// - [SmyNone] represents `None`
 /// - [SmyBool] represents `True` and `False`
-/// - [SmyInt] represents integer numbers
-/// - [SmyDouble] represents double numbers
+/// - [SmyNum] represents integer and double numbers
 /// - [SmyString] represents strings
 /// - [SmyTuple] represents tuples (immutable fixed-size arrays)
 /// - [SmyList] represents lists (mutable growable arrays)
@@ -113,7 +112,9 @@ abstract class SmyValue {
 
   bool get isNone => false;
   bool get boolValue => false;
-  int get intValue => throw 'TypeError: Not an integer';
+  num get numValue => throw 'TypeError: Not a number';
+  int get intValue => numValue.toInt();
+  double get doubleValue => numValue.toDouble();
   String get stringValue => throw 'TypeError: Not a string';
   SmyValue call(Frame f, List<SmyValue> args) => throw 'TypeError: Not callable';
 
@@ -125,6 +126,8 @@ abstract class SmyValue {
   SmyValue delAttr(String name) => throw "AttributeError: No attribute '$name'";
 
   Map<SmyValue, SmyValue> get mapValue => throw 'TypeError: Not a dict';
+
+  int get index => throw 'TypeError: list indices must be integers';
 
   static const SmyNone none = SmyNone._();
   static const SmyBool trueValue = SmyBool._(true);
@@ -175,12 +178,12 @@ class SmyBool extends SmyValue {
 }
 
 /// `NUMBER` (equatable, hashable)
-class SmyInt extends SmyValue {
-  const SmyInt(this.value);
-  final int value;
+class SmyNum extends SmyValue {
+  const SmyNum(this.value);
+  final num value;
 
   @override
-  bool operator ==(dynamic other) => other is SmyInt && value == other.value;
+  bool operator ==(dynamic other) => other is SmyNum && value == other.value;
 
   @override
   int get hashCode => value.hashCode;
@@ -192,7 +195,13 @@ class SmyInt extends SmyValue {
   bool get boolValue => value != 0;
 
   @override
-  int get intValue => value;
+  num get numValue => value;
+
+  @override
+  int get index {
+    if (value is! int) return super.index;
+    return intValue;
+  }
 }
 
 /// `STRING` (equatable, hashable)

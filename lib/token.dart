@@ -30,7 +30,7 @@ class Token {
   bool get isString => _source[_start] == '"' || _source[_start] == "'";
 
   /// Returns the token's numeric value (only valid if [isNumber] is true).
-  int get number => int.parse(value);
+  num get number => num.parse(value);
 
   /// Returns the token's string value (only valid if [isString] is true).
   String get string => _unescape(_source.substring(_start + 1, _end - 1));

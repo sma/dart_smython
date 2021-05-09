@@ -320,7 +320,7 @@ class GeExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f).intValue >= right.evaluate(f).intValue);
+    return SmyBool(left.evaluate(f).numValue >= right.evaluate(f).numValue);
   }
 }
 
@@ -331,7 +331,7 @@ class GtExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f).intValue > right.evaluate(f).intValue);
+    return SmyBool(left.evaluate(f).numValue > right.evaluate(f).numValue);
   }
 }
 
@@ -342,7 +342,7 @@ class LeExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f).intValue <= right.evaluate(f).intValue);
+    return SmyBool(left.evaluate(f).numValue <= right.evaluate(f).numValue);
   }
 }
 
@@ -353,7 +353,7 @@ class LtExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyBool(left.evaluate(f).intValue < right.evaluate(f).intValue);
+    return SmyBool(left.evaluate(f).numValue < right.evaluate(f).numValue);
   }
 }
 
@@ -393,7 +393,7 @@ class AddExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyInt(left.evaluate(f).intValue + right.evaluate(f).intValue);
+    return SmyNum(left.evaluate(f).numValue + right.evaluate(f).numValue);
   }
 }
 
@@ -404,7 +404,7 @@ class SubExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyInt(left.evaluate(f).intValue - right.evaluate(f).intValue);
+    return SmyNum(left.evaluate(f).numValue - right.evaluate(f).numValue);
   }
 }
 
@@ -415,7 +415,7 @@ class MulExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyInt(left.evaluate(f).intValue * right.evaluate(f).intValue);
+    return SmyNum(left.evaluate(f).numValue * right.evaluate(f).numValue);
   }
 }
 
@@ -426,7 +426,7 @@ class DivExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyInt(left.evaluate(f).intValue ~/ right.evaluate(f).intValue);
+    return SmyNum(left.evaluate(f).numValue ~/ right.evaluate(f).numValue);
   }
 }
 
@@ -437,7 +437,7 @@ class ModExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
-    return SmyInt(left.evaluate(f).intValue % right.evaluate(f).intValue);
+    return SmyNum(left.evaluate(f).numValue % right.evaluate(f).numValue);
   }
 }
 
@@ -456,7 +456,7 @@ class NegExpr extends Expr {
   final Expr expr;
 
   @override
-  SmyValue evaluate(Frame f) => SmyInt(-expr.evaluate(f).intValue);
+  SmyValue evaluate(Frame f) => SmyNum(-expr.evaluate(f).numValue);
 }
 
 /// `expr(args, ...)`
@@ -484,8 +484,8 @@ class IndexExpr extends Expr {
     if (value is SmyDict) {
       return value.values[index] ?? SmyValue.none;
     }
-    if (index is SmyInt) {
-      var i = index.intValue;
+    if (index is SmyNum) {
+      var i = index.index;
       if (i < 0) i += length;
       if (i < 0 || i >= length) throw 'IndexError: index out of range';
       if (value is SmyString) {
@@ -494,8 +494,8 @@ class IndexExpr extends Expr {
       return value.iterable.skip(i).first;
     }
     final slice = (index as SmyTuple).values;
-    var i = slice[0] != SmyValue.none ? slice[0].intValue : 0;
-    var j = slice[1] != SmyValue.none ? slice[1].intValue : length;
+    var i = slice[0] != SmyValue.none ? slice[0].index : 0;
+    var j = slice[1] != SmyValue.none ? slice[1].index : length;
     if (slice[2] != SmyValue.none) throw 'slicing with step not yet implemented';
     if (i < 0) i += length;
     if (i < 0) i = 0;

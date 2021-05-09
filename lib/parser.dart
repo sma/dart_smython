@@ -496,7 +496,7 @@ class Parser {
     }
     if (t.isNumber) {
       advance();
-      return LitExpr(SmyInt(t.number));
+      return LitExpr(SmyNum(t.number));
     }
     if (t.isString) {
       final buffer = StringBuffer();

@@ -254,3 +254,12 @@ True
 ...     return fib(n - 1) + fib(n - 2)
 >>> fib(20)
 6765
+
+# syntax errors
+>>> if 1
+SyntaxError: expected : but found NEWLINE at line 1
+>>> break 1
+SyntaxError: expected NEWLINE but found 1 at line 1
+>>> class "A"
+SyntaxError: expected NAME but found "A" at line 1
+

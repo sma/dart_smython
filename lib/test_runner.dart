@@ -32,11 +32,10 @@ void run(String filename) {
       report.writeln('----------');
       report.write(source);
 
-      final suite = parse(source);
-      final frame = Frame(null, {}, {}, Smython().builtins);
-
       String actual;
       try {
+        final suite = parse(source);
+        final frame = Frame(null, {}, {}, Smython().builtins);
         actual = repr(suite.evaluate(frame));
       } catch (e) {
         actual = '$e';

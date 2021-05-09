@@ -115,7 +115,7 @@ class Parser {
   /// Consumes the current token if and only if its value is [value] and
   /// throws a [SyntaxError] otherwise.
   void expect(String value) {
-    if (!at(value)) throw syntaxError('expected $value');
+    if (!at(value)) throw syntaxError('expected ${value == '\n' ? 'NEWLINE' : value}');
   }
 
   /// Constructs a syntax error with [message] and the current token.

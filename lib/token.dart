@@ -50,7 +50,7 @@ class Token {
   }
 
   @override
-  String toString() => '«$value»';
+  String toString() => value == '\n' ? 'NEWLINE' : value;
 
   /// A synthetic token representing an indentation in the next line.
   static const indent = Token('!INDENT', 0, 7);

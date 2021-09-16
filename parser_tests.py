@@ -333,3 +333,33 @@ UnimplementedError
 True
 >>> 1 < 1 < 5, 1 < 5 < 5
 (False, False)
+
+# string addition and comparison
+>>> a='hello'
+>>> b=' world'
+>>> a+b
+'hello world'
+>>> a='hello'
+>>> b='world'
+>>> a<b
+True
+>>> a='hello'
+>>> b='hello'
+>>> a<b
+False
+>>> a='hello'
+>>> b='hello'
+>>> a<=b
+True
+>>> a='hello'
+>>> b='hello'
+>>> a>b
+False
+>>> a='hello'
+>>> b='hello'
+>>> a>=b
+True
+>>> a='A'
+>>> b='B'
+>>> b>a
+True

@@ -426,11 +426,30 @@ class CompOp {
 
   static bool eq(SmyValue l, SmyValue r) => l == r;
   static bool ne(SmyValue l, SmyValue r) => !eq(l, r);
-  static bool lt(SmyValue l, SmyValue r) => l.numValue < r.numValue;
-  static bool gt(SmyValue l, SmyValue r) => l.numValue > r.numValue;
-  static bool le(SmyValue l, SmyValue r) => l.numValue <= r.numValue;
-  static bool ge(SmyValue l, SmyValue r) => l.numValue >= r.numValue;
-
+  static bool lt(SmyValue l, SmyValue r) { 
+    if (l is SmyString && r is SmyString)
+      return l.value.compareTo(r.value) < 0;
+    else
+      return l.numValue < r.numValue; 
+  };
+  static bool gt(SmyValue l, SmyValue r) {
+    if (l is SmyString && r is SmyString)
+      return l.value.compareTo(r.value) > 0;
+    else
+      return l.numValue > r.numValue; 
+  }
+  static bool le(SmyValue l, SmyValue r) {
+    if (l is SmyString && r is SmyString)
+      return l.value.compareTo(r.value) <= 0;
+    else
+      return l.numValue <= r.numValue     
+  }
+  static bool ge(SmyValue l, SmyValue r) {
+    if (l is SmyString && r is SmyString)
+      return l.value.compareTo(r.value) >= 0;
+    else
+      return l.numValue >= r.numValue     
+  }
   static bool in_(SmyValue l, SmyValue r) => throw UnimplementedError();
   static bool notin(SmyValue l, SmyValue r) => !in_(l, r);
   static bool is_(SmyValue l, SmyValue r) => throw UnimplementedError();

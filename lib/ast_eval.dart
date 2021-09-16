@@ -431,7 +431,7 @@ class CompOp {
       return l.value.compareTo(r.value) < 0;
     else
       return l.numValue < r.numValue; 
-  };
+  }
   static bool gt(SmyValue l, SmyValue r) {
     if (l is SmyString && r is SmyString)
       return l.value.compareTo(r.value) > 0;

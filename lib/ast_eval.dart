@@ -360,7 +360,14 @@ abstract class Expr {
   bool get assignable => false;
 
   // default arithmetic & bit operations
-  static SmyValue add(SmyValue l, SmyValue r) => SmyNum(l.numValue + r.numValue);
+  static SmyValue add(SmyValue l, SmyValue r) {
+    if (l is SmyNum && r is SmyNum)
+      return SmyNum(l.numValue + r.numValue);
+    if (l is SmyString && r is SmyString)
+      return SmyString(l.value + r.value);
+    else
+      throw "TypeError: left and right operand should be num or string for + to work";
+  }
   static SmyValue sub(SmyValue l, SmyValue r) => SmyNum(l.numValue - r.numValue);
   static SmyValue mul(SmyValue l, SmyValue r) => SmyNum(l.numValue * r.numValue);
   static SmyValue div(SmyValue l, SmyValue r) => SmyNum(l.numValue / r.numValue);

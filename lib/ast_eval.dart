@@ -442,13 +442,13 @@ class CompOp {
     if (l is SmyString && r is SmyString)
       return l.value.compareTo(r.value) <= 0;
     else
-      return l.numValue <= r.numValue     
+      return l.numValue <= r.numValue;     
   }
   static bool ge(SmyValue l, SmyValue r) {
     if (l is SmyString && r is SmyString)
       return l.value.compareTo(r.value) >= 0;
     else
-      return l.numValue >= r.numValue     
+      return l.numValue >= r.numValue;     
   }
   static bool in_(SmyValue l, SmyValue r) => throw UnimplementedError();
   static bool notin(SmyValue l, SmyValue r) => !in_(l, r);

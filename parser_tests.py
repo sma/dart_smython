@@ -363,3 +363,13 @@ True
 >>> b='B'
 >>> b>a
 True
+
+# operations with different types
+>>> a='hello'
+>>> b=1
+>>> a+b
+TypeError: left and right operand should be num or string for + to work
+>>> a='hello'
+>>> b=1
+>>> a<b
+TypeError: Not a number

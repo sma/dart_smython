@@ -463,6 +463,8 @@ class CompOp {
       return r.values.keys.contains(l);
     if (r is SmyList)
       return r.values.contains(l);
+    if (r is SmyString && l is SmyString)
+      return r.value.contains(l.value);
     throw UnimplementedError();
   }
   static bool notin(SmyValue l, SmyValue r) => !in_(l, r);

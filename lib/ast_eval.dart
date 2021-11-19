@@ -450,7 +450,13 @@ class CompOp {
     else
       return l.numValue >= r.numValue;     
   }
-  static bool in_(SmyValue l, SmyValue r) => throw UnimplementedError();
+  static bool in_(SmyValue l, SmyValue r) {
+    if (r is SmyDict)
+      return r.values.keys.contains(l);
+    if (r is SmyList)
+      return r.values.contains(l);
+    throw UnimplementedError();
+  }
   static bool notin(SmyValue l, SmyValue r) => !in_(l, r);
   static bool is_(SmyValue l, SmyValue r) => throw UnimplementedError();
   static bool notis(SmyValue l, SmyValue r) => !is_(l, r);

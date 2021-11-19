@@ -429,26 +429,34 @@ class CompOp {
   static bool lt(SmyValue l, SmyValue r) { 
     if (l is SmyString && r is SmyString)
       return l.value.compareTo(r.value) < 0;
+    else if (l is SmyNum && r is SmyNum)
+      return l.numValue < r.numValue;
     else
-      return l.numValue < r.numValue; 
+      throw UnimplementedError();
   }
   static bool gt(SmyValue l, SmyValue r) {
     if (l is SmyString && r is SmyString)
       return l.value.compareTo(r.value) > 0;
+    else if (l is SmyNum && r is SmyNum)
+      return l.numValue > r.numValue;
     else
-      return l.numValue > r.numValue; 
+      throw UnimplementedError();
   }
   static bool le(SmyValue l, SmyValue r) {
     if (l is SmyString && r is SmyString)
       return l.value.compareTo(r.value) <= 0;
+    else if (l is SmyNum && r is SmyNum)
+      return l.numValue <= r.numValue;
     else
-      return l.numValue <= r.numValue;     
+      throw UnimplementedError();
   }
   static bool ge(SmyValue l, SmyValue r) {
     if (l is SmyString && r is SmyString)
       return l.value.compareTo(r.value) >= 0;
+    else if (l is SmyNum && r is SmyNum)
+      return l.numValue >= r.numValue;
     else
-      return l.numValue >= r.numValue;     
+      throw UnimplementedError();
   }
   static bool in_(SmyValue l, SmyValue r) {
     if (r is SmyDict)

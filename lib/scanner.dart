@@ -1,14 +1,16 @@
-/// Splits source code into tokens.
+/// Splits Smython source code into tokens.
 library scanner;
 
 import 'token.dart';
 export 'token.dart';
 
-/// Returns an iterable of [Token]s tokenized from [source].
+/// Returns an iterable of [Token]s generated from [source].
 ///
+/// Restrictions in comparison with Python:
 /// * Code must be indented by exactly four spaces.
 /// * TABs are not allowed.
 /// * Open parentheses do not relax indentation rules.
+/// * Lines ending with `\` are joined with the next line and mess up line numbers.
 Iterable<Token> tokenize(String source) sync* {
   // keep track of indentation
   var curIndent = 0;
@@ -25,15 +27,15 @@ Iterable<Token> tokenize(String source) sync* {
 
   // compile the regular expression to tokenize the source
   final regex = RegExp(
-    '^ *(?:#.*)?\n|#.*\$|(' // whitespace and comments
-    '^ +|' // indentation
-    '\n|' // newline
-    '\\d+(?:\\.\\d*)?|' // numbers
-    '\\w+|' // names
-    '[()\\[\\]{}:.,;]|' // syntax
-    '[+\\-*/%<>=|&]=?|!=|' // operators
-    "'(?:\\\\[n'\"\\\\]|[^'])*'|" // single-quote strings
-    '"(?:\\\\[n\'"\\\\]|[^"])*"' // double-quote strings
+    '^ *(?:#.*)?\n|#.*\$|(' //       whitespace and comments
+    '^ +|' //                        indentation
+    '\n|' //                         newline
+    '\\d+(?:\\.\\d*)?|' //           numbers
+    '\\w+|' //                       names
+    '[()\\[\\]{}:.,;]|' //           syntax
+    '[+\\-*/%<>=|&]=?|!=|' //        operators
+    "'(?:\\\\[n'\"\\\\]|[^'])*'|" // single-quoted strings
+    '"(?:\\\\[n\'"\\\\]|[^"])*"' //  double-quoted strings
     ')',
     multiLine: true,
   );

@@ -1,5 +1,5 @@
-/// The [Token] class is used by the scanner to split the source code
-/// into chunks that are then processed by the parser.
+/// The [Token] class is used by the scanner to split Smython source code
+/// into bits and pieces which are then processed by the parser.
 library token;
 
 /// Represents a piece of source code.
@@ -7,6 +7,8 @@ library token;
 /// Tokens are either keywords, NAMEs, NUMBERs, STRINGs, operators, syntax,
 /// or synthesized INDENT, DEDENT, NEWLINE, or EOF tokens. Currently, these
 /// synthesized tokens have no valid line number.
+/// 
+/// Tokens are spans of source code and do not allocate.
 class Token {
   const Token(this._source, this._start, this._end);
 
@@ -17,7 +19,7 @@ class Token {
   /// Returns the piece of source code this token represents.
   String get value => _source.substring(_start, _end);
 
-  /// Returns whether this token is a Smython keyword.
+  /// Returns whether this token is a reserved Smython keyword.
   bool get isKeyword => _keywords.contains(value);
 
   /// Returns whether this token is a NAME but not also a keyword.
@@ -36,6 +38,10 @@ class Token {
   String get string => _unescape(_source.substring(_start + 1, _end - 1));
 
   /// Returns the line of the source code this token is at (1-based).
+  /// 
+  /// This is computed on the fly by counting newline characters in front
+  /// of the token, so don't call it too often. Synthesized tokens have no
+  /// valid line, so don't call this for [indent], [dedent], or [eof].
   int get line {
     var line = 1;
     for (var i = 0; i < _start; i++) {
@@ -55,15 +61,16 @@ class Token {
   @override
   String toString() => value == '\n' ? 'NEWLINE' : value;
 
-  /// A synthetic token representing an indentation in the next line.
+  /// A synthetic token representing an indentation before the next line.
   static const indent = Token('!INDENT', 0, 7);
 
-  /// A synthetic token representing a dedentation in the next line.
+  /// A synthetic token representing a dedentation before the next line.
   static const dedent = Token('!DEDENT', 0, 7);
 
   /// A synthetic token representing the end of the input.
   static const eof = Token('!EOF', 0, 4);
 
+  /// Replaces `\n`, `\'`, `\"`, or `\\` in [s].
   static String _unescape(String s) {
     // see scanner.dart for which string escapes are supported
     return s.replaceAllMapped(RegExp('\\\\([n\'"\\\\])'), (match) {

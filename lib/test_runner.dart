@@ -1,14 +1,16 @@
-/// A test runner.
+/// A test runner for Smython source code.
 ///
 /// Lines starting with `#` and empty lines are ignored. Lines starting
 /// with `>>>` or `...` are stripped from the the prefix, combined and then
-/// executed as Symthon code, comparing the result of the last expressions
-/// to the next non-empty, non-comment line without a prefix after using
-/// [repr] to convert the result into a string representation.
+/// executed as Symthon code, comparing the result of the last expression
+/// to the next non-empty, non-comment line without a prefix, after using
+/// [repr] to convert the result of the evaluation into a string
+/// representation for easy comparison.
 ///
 /// Then either `OK` is printed or both the actual and the expected value.
 ///
-/// After running all tests, the number of failures is printed.
+/// After running all tests, the number of failures is printed. If the 
+/// output ends with `OK`, there are no failure and everything is shiny.
 library test_runner;
 
 import 'dart:io';

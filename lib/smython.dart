@@ -4,36 +4,44 @@
 /// extendable number of builtin function. Use [Smython.builtin] to add
 /// your own. Use [Smython.execute] to run Smython code.
 ///
-/// To learn more about the syntax, see `parser.dart`.
+/// Example:
+/// ```
+/// Smython().execute('print(3+4)');
+/// ```
+///
+/// To learn more about the supported syntax, see `parser.dart`.
 ///
 /// See [SmyValue] for how Smython values are represented in Dart. Use
-/// [make] to convert a Dart value into a [SmyValue] instance.
+/// [make] to convert a Dart value into a [SmyValue] instance. This might
+/// throw if there is no Smython value of tha given Dart value.
 library smython;
 
-import 'ast_eval.dart';
+import 'ast_eval.dart' show Expr, Suite;
 import 'parser.dart' show parse;
 
 export 'parser.dart' show parse;
 
+typedef SmythonBuiltin = SmyValue Function(Frame f, List<SmyValue> args);
+
 /// Main entry point.
 class Smython {
-  final Map<SmyValue, SmyValue> builtins = {};
-  final Map<SmyValue, SmyValue> globals = {};
+  final builtins = <SmyValue, SmyValue>{};
+  final globals = <SmyValue, SmyValue>{};
 
   Smython() {
-    builtin('print', (Frame cf, List<SmyValue> args) {
+    builtin('print', (f, args) {
       print(args.map((v) => '$v').join(' '));
       return none;
     });
-    builtin('len', (Frame cf, List<SmyValue> args) {
+    builtin('len', (f, args) {
       if (args.length != 1) throw 'TypeError: len() takes 1 argument (${args.length} given)';
       return SmyNum(args[0].length);
     });
-    builtin('slice', (Frame f, List<SmyValue> args) {
+    builtin('slice', (f, args) {
       if (args.length != 3) throw 'TypeError: slice() takes 3 arguments (${args.length} given)';
       return SmyTuple(args);
     });
-    builtin('del', (Frame f, List<SmyValue> args) {
+    builtin('del', (f, args) {
       if (args.length != 2) throw 'TypeError: del() takes 2 arguments (${args.length} given)';
       final value = args[0];
       final index = args[1];
@@ -60,11 +68,13 @@ class Smython {
     });
   }
 
-  void builtin(String name, SmyValue Function(Frame, List<SmyValue>) func) {
+  /// Adds [func] as a new builtin function [name] to the system.
+  void builtin(String name, SmythonBuiltin func) {
     final bname = SmyString.intern(name);
     builtins[bname] = SmyBuiltin(bname, func);
   }
 
+  /// Runs [source].
   void execute(String source) {
     parse(source).evaluate(Frame(null, globals, globals, builtins));
   }
@@ -76,17 +86,22 @@ const none = SmyValue.none;
 /// Returns the Smython value for a Dart [value].
 SmyValue make(dynamic value) {
   if (value == null) return SmyNone();
+  if (value is SmyValue) return value;
   if (value is bool) return SmyBool(value);
   if (value is num) return SmyNum(value);
   if (value is String) return SmyString(value);
   if (value is List<SmyValue>) return SmyList(value);
+  if (value is List) return make([...value.map(make)]);
   if (value is Map<SmyValue, SmyValue>) return SmyDict(value);
+  if (value is Map) return make(value.map((dynamic key, dynamic value) => MapEntry(make(key), make(value))));
   if (value is Set<SmyValue>) return SmySet(value);
+  if (value is Set) return make(value.map(make).toSet());
   throw "TypeError: alien value '$value'";
 }
 
 /// Everything in Smython is a value.
 ///
+/// There are a lot of subclasses:
 /// - [SmyNone] represents `None`
 /// - [SmyBool] represents `True` and `False`
 /// - [SmyNum] represents integer and double numbers
@@ -101,14 +116,22 @@ SmyValue make(dynamic value) {
 /// - [SmyObject] represents objects
 /// - [SmyClass] represents classes
 ///
+/// 
+/// Each value knows whether it is the [none] singleton.
 /// Each value has an associated boolean value ([boolValue]).
 /// Each value has a print string ([toString]).
 /// Some values have associated [intValue] or [doubleValue].
+/// Some values are even strings ([stringValue]).
 /// Some values are callable ([call]).
 /// Some values are iterable ([iterable]).
-/// Those values also have an associated length.
+/// Those values also have an associated [length].
 /// Some values have attributes which can be get, set and/or deleted.
-///
+/// Some values are representable as a Dart map ([mapValue]).
+/// Some values are can be used a list index ([index]).
+/// 
+/// For efficency, [SmyString.intern] can be used to create unique strings,
+/// so called symbols which are used in [Frame] objects to lookup values.
+/// 
 abstract class SmyValue {
   const SmyValue();
 
@@ -119,7 +142,6 @@ abstract class SmyValue {
   double get doubleValue => numValue.toDouble();
   String get stringValue => throw 'TypeError: Not a string';
   SmyValue call(Frame cf, List<SmyValue> args) => throw 'TypeError: Not callable';
-
   Iterable<SmyValue> get iterable => throw 'TypeError: Not iterable';
   int get length => iterable.length;
 
@@ -201,8 +223,8 @@ class SmyNum extends SmyValue {
 
   @override
   int get index {
-    if (value is! int) return super.index;
-    return intValue;
+    if (value is int) return intValue;
+    return super.index;
   }
 }
 
@@ -303,6 +325,12 @@ class SmySet extends SmyValue {
   final Set<SmyValue> values;
 
   @override
+  String toString() {
+    if (values.isEmpty) return 'set()';
+    return '{${values.join(', ')}}';
+  }
+
+  @override
   bool get boolValue => values.isNotEmpty;
 
   @override
@@ -334,6 +362,7 @@ class SmyClass extends SmyValue {
   @override
   String toString() => "<class '$_name'>";
 
+  /// Calling a class creates a new instance of that class.
   @override
   SmyValue call(Frame cf, List<SmyValue> args) {
     final object = SmyObject(this);
@@ -367,10 +396,10 @@ class SmyObject extends SmyValue {
   SmyValue getAttr(String name) {
     if (name == '__class__') return _class;
     if (name == '__dict__') return _dict;
-
+    // returns a user-defined property
     final value1 = _dict.values[SmyString(name)];
     if (value1 != null) return value1;
-
+    // returns a class property and bind functions as methods
     final value = _class.findAttr(name);
     if (value != null) {
       if (value is SmyFunc) {
@@ -423,12 +452,12 @@ class SmyFunc extends SmyValue {
   }
 }
 
-/// builtin function like print or len
+/// Builtin function like `print` or `len`.
 class SmyBuiltin extends SmyValue {
   const SmyBuiltin(this.name, this.func);
 
   final SmyString name;
-  final SmyValue Function(Frame cf, List<SmyValue> args) func;
+  final SmythonBuiltin func;
 
   @override
   String toString() => '<built-in function $name>';
@@ -439,13 +468,20 @@ class SmyBuiltin extends SmyValue {
 
 // -------- Runtime --------
 
-/// Runtime state passed to all AST node when evaluating them.
+/// Runtime state passed to all AST nodes while evaluating them.
 class Frame {
   Frame(this.parent, this.locals, this.globals, this.builtins);
 
+  /// Links to the parent frame, a.k.a. sender.
   final Frame? parent;
+
+  /// Private bindings local to this frame, a.k.a. local variables.
   final Map<SmyValue, SmyValue> locals;
+
+  /// Shared bindings global to this frame, a.k.a. global variables.
   final Map<SmyValue, SmyValue> globals;
+
+  /// Shared bindings global to this frame, not overwritable.
   final Map<SmyValue, SmyValue> builtins;
 
   /// Returns the value bound to [name] by first searching [locals],

@@ -1,11 +1,11 @@
-/// AST nodes represent a Smython program and can be evaluated.
+/// Abstract syntax tree nodes represent a Smython program and can be
+/// recursively evaluated to execute said program.
 ///
-/// A [Suite] is a sequential list of statements.
-/// [Stmt] is the abstract superclass for all statements.
-/// [Expr] is the abstract superclass for all expressions.
-///
-/// All nodes have a `evaluate(Frame)` method.
-/// Some expressions also support `assign(Frame,SmyValue)`.
+/// * A [Suite] is a sequential list of statements.
+/// * [Stmt] is the abstract superclass for all statements.
+/// * [Expr] is the abstract superclass for all expressions.
+/// * All nodes have a `evaluate(Frame)` method.
+/// * Some [Expr] subclasses also support `assign(Frame,SmyValue)`.
 library ast_eval;
 
 import 'package:smython/smython.dart';
@@ -17,6 +17,9 @@ class Suite {
   const Suite(this.stmts);
   final List<Stmt> stmts;
 
+  /// Executes all [stmts] sequentially on top level, that is [ReturnStmt],
+  /// [BreakStmt], or [ContinueStmt] are not allowed here. They will throw
+  /// unhandled exceptions.
   SmyValue evaluate(Frame f) {
     SmyValue result = SmyValue.none;
     for (final stmt in stmts) {
@@ -25,6 +28,10 @@ class Suite {
     return result;
   }
 
+  /// Executes all [stmts] sequentially as while evaluating a function
+  /// body. [ReturnStmt] will stop the execution and return its value.
+  /// [BreakStmt] or [ContinueStmt] are not allowed here. They will throw
+  /// unhandled exceptions.
   SmyValue evaluateAsFunc(Frame f) {
     try {
       return evaluate(f);
@@ -50,6 +57,8 @@ class IfStmt extends Stmt {
   final Suite thenSuite;
   final Suite elseSuite;
 
+  /// Evaluates [test] and based on the boolean value of its result,
+  /// either [thenSuite] or [elseSuite] is evaluated.
   @override
   SmyValue evaluate(Frame f) {
     if (test.evaluate(f).boolValue) {
@@ -68,6 +77,10 @@ class WhileStmt extends Stmt {
   final Suite suite;
   final Suite elseSuite;
 
+  /// Evaluates [test] and if its boolean value is `true`, [suite] is
+  /// evaluated. Then, it repeats by evaluating [test] again. A [BreakStmt]
+  /// will stop that this. A [ContinueStmt] will restart the loop. If the
+  /// loop ends without `break`, [elseSuite] is evaluated.
   @override
   SmyValue evaluate(Frame f) {
     while (test.evaluate(f).boolValue) {
@@ -91,6 +104,11 @@ class ForStmt extends Stmt {
   final Suite suite;
   final Suite elseSuite;
 
+  /// Evaluates [items], which must result in an iterable, then a loop
+  /// starts which assigns each element of the iterable to [target] before
+  /// evaluating [suite]. A [BreakStmt] will stop that this.
+  /// A [ContinueStmt] will restart the loop. If the loop ends without
+  /// `break`, [elseSuite] is evaluated.
   @override
   SmyValue evaluate(Frame f) {
     final i = items.evaluate(f).iterable;
@@ -113,6 +131,9 @@ class TryFinallyStmt extends Stmt {
   const TryFinallyStmt(this.suite, this.finallySuite);
   final Suite suite, finallySuite;
 
+  /// Evaluates [suite]. Thereafter, before returning, [finallySuite] is
+  /// evaluated, even if the evaluation of [suite] was aborted because
+  /// of exceptions.
   @override
   SmyValue evaluate(Frame f) {
     try {
@@ -130,23 +151,28 @@ class TryExceptStmt extends Stmt {
   final Suite trySuite, elseSuite;
   final List<ExceptClause> excepts;
 
+  /// Evaluates [trySuite], thereafter, also evaluate [elseSuite]. If a
+  /// [RaiseStmt] raises an exception to abort the evaluation of [trySuite],
+  /// we try to match it to one of the [excepts] and evaluate the matching
+  /// [ExceptClause.suite].
   @override
   SmyValue evaluate(Frame f) {
     try {
       trySuite.evaluate(f);
-      elseSuite.evaluate(f);
     } on _Raise catch (e) {
-      final ex = e.value;
       for (final except in excepts) {
         // TODO search for the right clause
-        var ff = f;
-        if (except.name != null) {
-          ff = Frame(f, {SmyString(except.name!): ex}, f.globals, f.builtins);
+        if (except.matches(f, e.value)) {
+          var ff = f;
+          if (except.name != null) {
+            ff = Frame(f, {SmyString(except.name!): e.value}, f.globals, f.builtins);
+          }
+          return except.suite.evaluate(ff);
         }
-        except.suite.evaluate(ff);
       }
+      rethrow;
     }
-    return SmyValue.none;
+    return elseSuite.evaluate(f);
   }
 }
 
@@ -156,6 +182,13 @@ class ExceptClause {
   final Expr? test;
   final String? name;
   final Suite suite;
+
+  bool matches(Frame f, SmyValue value) {
+    if (test == null) return true;
+    final type = test!.evaluate(f);
+    // TODO implement an instance of operation to match the type
+    return type == value;
+  }
 }
 
 /// `def name(param=def, ...): suite`
@@ -166,6 +199,10 @@ class DefStmt extends Stmt {
   final List<Expr> defs;
   final Suite suite;
 
+  /// Defines a new function called [name] that expects [params] and uses
+  /// [defs] to compute the arguments if they aren't given. Hence, [params]
+  /// and [defs] should have the same length. Use [suite] as the function's
+  /// body.
   @override
   SmyValue evaluate(Frame f) {
     final n = SmyString.intern(name);
@@ -180,11 +217,15 @@ class ClassStmt extends Stmt {
   final Expr superExpr;
   final Suite suite;
 
+  /// Defines a new class called [name] that inherits from [superExpr]
+  /// which must evaluate to [SmyClass] value. Use [suite] as the body
+  /// of the class which is evaluated in its context in such a way that
+  /// [DefStmt] statements will create methods instead of functions.
   @override
   SmyValue evaluate(Frame f) {
     final superclass = superExpr.evaluate(f);
     if (superclass != SmyValue.none && superclass is! SmyClass) {
-      throw 'TypeError: superclass is not a class';
+      throw _Raise(SmyString('TypeError: superclass is not a class'));
     }
     final n = SmyString.intern(name);
     final cls = SmyClass(n, superclass != SmyValue.none ? superclass as SmyClass : null);
@@ -198,6 +239,7 @@ class ClassStmt extends Stmt {
 class PassStmt extends Stmt {
   const PassStmt();
 
+  /// Evaluates to `none`.
   @override
   SmyValue evaluate(Frame f) {
     return SmyValue.none;
@@ -208,6 +250,7 @@ class PassStmt extends Stmt {
 class BreakStmt extends Stmt {
   const BreakStmt();
 
+  /// Throws an internal exception to break a [WhileStmt] or [ForStmt].
   @override
   SmyValue evaluate(Frame f) => throw _Break();
 }
@@ -216,6 +259,7 @@ class BreakStmt extends Stmt {
 class ContinueStmt extends Stmt {
   const ContinueStmt();
 
+  /// Throws an internal exception to continue a [WhileStmt] or [ForStmt].
   @override
   SmyValue evaluate(Frame f) => throw _Continue();
 }
@@ -225,6 +269,8 @@ class ReturnStmt extends Stmt {
   const ReturnStmt(this.expr);
   final Expr expr;
 
+  /// Evaluates [expr] and throws an internal exception to return the
+  /// result of that evaluation from a function body.
   @override
   SmyValue evaluate(Frame f) => throw _Return(expr.evaluate(f));
 }
@@ -234,6 +280,7 @@ class RaiseStmt extends Stmt {
   const RaiseStmt(this.expr);
   final Expr expr;
 
+  /// Throws an internal exception to raise an exception evaluated from [expr].
   @override
   SmyValue evaluate(Frame f) => throw _Raise(expr.evaluate(f));
 }
@@ -272,11 +319,13 @@ class AssertStmt extends Stmt {
   final Expr expr;
   final Expr? message;
 
+  /// Evaluates [expr] and if its boolean value is not `true`, evaluates
+  /// the optional [message] to raise this as an `AssertionError`.
   @override
   SmyValue evaluate(Frame f) {
     if (!expr.evaluate(f).boolValue) {
       final m = message?.evaluate(f).stringValue;
-      throw make(m == null ? 'AssertionError' : 'AssertionError: $m');
+      throw _Raise(make(m == null ? 'AssertionError' : 'AssertionError: $m'));
     }
     return SmyValue.none;
   }
@@ -287,6 +336,7 @@ class ExprStmt extends Stmt {
   const ExprStmt(this.expr);
   final Expr expr;
 
+  /// Evaluates [expr] ignoring the result, just for its side effect.
   @override
   SmyValue evaluate(Frame f) => expr.evaluate(f);
 }
@@ -296,10 +346,14 @@ class AssignStmt extends Stmt {
   const AssignStmt(this.lhs, this.rhs);
   final Expr lhs, rhs;
 
+  /// Evaluates [rhs] and assigns the result of that evaluation to [lhs],
+  /// evaluating it as required being the LHS of an assignment. Also
+  /// performs deconstruction of arguments so that `a, b = (1, 2)` works.
   @override
   SmyValue evaluate(Frame f) => lhs.assign(f, rhs.evaluate(f));
 }
 
+/// Abstract superclass of all `lhs op= rhs` operations.
 abstract class AugAssignStmt extends Stmt {
   const AugAssignStmt(this.lhs, this.rhs, this.op);
   final Expr lhs, rhs;
@@ -347,16 +401,19 @@ class AndAssignStmt extends AugAssignStmt {
 // -------- Expr --------
 
 /// An expression can be evaluated.
-/// It might be [assignable] in which case it can be [assign]ed to.
+///
+/// It might be [assignable] in which case it can be [assign]ed to. Trying
+/// to assign to something not [assignable] will raise an error.
 abstract class Expr {
   const Expr();
 
   /// Returns the result of the evaluation of this node in the context of [f].
   SmyValue evaluate(Frame f);
 
-  SmyValue assign(Frame f, SmyValue value) => throw "SyntaxError: can't assign";
+  /// Assigns [value] to the receiver; by default a `SyntaxError` is raised.
+  SmyValue assign(Frame f, SmyValue value) => throw _Raise(make("SyntaxError: can't assign"));
 
-  /// Returns whether [assign] can be called on this node.
+  /// Returns whether [assign] can be safely called on this node.
   bool get assignable => false;
 
   // default arithmetic & bit operations
@@ -726,4 +783,7 @@ class _Return {
 class _Raise {
   _Raise(this.value);
   final SmyValue value;
+
+  @override
+  String toString() => '$value';
 }

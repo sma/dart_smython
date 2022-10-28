@@ -1,5 +1,5 @@
-/// Parses Smython source, a programming language similar to a subset of
-/// Python 3 that is barely capable of running the factorial function.
+/// Parses Smython source code, a programming language similar to a subset
+/// of Python 3 that is barely capable of running the factorial function.
 ///
 /// Here is a simple example:
 ///
@@ -10,7 +10,7 @@
 /// print(fac(10))
 /// ```
 ///
-/// Syntax differences to Python 3:
+/// Syntax differences to Python 3.7 (or later versions):
 ///
 /// Smython has no decorators, `async` functions, typed function parameters,
 /// function keyword arguments, argument spatting with `*` or `**`, no
@@ -23,7 +23,7 @@
 /// but only a single value or slice, no tripple-quoted, byte, or raw
 /// strings, only unicode ones.
 ///
-/// Also, indentation must use four spaces. TABs are not allowed.
+/// Also, indentation must use exactly four spaces. TABs are not allowed.
 ///
 /// ## EBNF Grammar:
 /// ```
@@ -81,7 +81,7 @@
 /// testlist: test {',' test} [',']
 /// ```
 ///
-/// Parsing may throw a syntax error.
+/// Parsing may throw a [SyntaxError].
 library parser;
 
 import 'ast_eval.dart';
@@ -96,6 +96,7 @@ Suite parse(String source) {
 /// Parses a sequence of tokens into an AST.
 ///
 /// This is a handcrafted LL(1) recursive descent parser.
+/// See library header for the grammar which has been implemented.
 class Parser {
   Parser(this._iter) {
     advance();
@@ -127,7 +128,7 @@ class Parser {
   }
 
   /// Constructs a syntax error with [message] and the current token.
-  /// It should also denote the current token's line. Hopefully the
+  /// It should also announce the current token's line. Hopefully the
   /// current token is never a synthesized token.
   SyntaxError syntaxError(String message) {
     return SyntaxError('$message but found ${token == Token.eof ? 'end of input' : '$token'} at line ${token.line}');
@@ -683,7 +684,7 @@ class Parser {
 
   /// Returns whether the current token is a valid start of a `test`.
   /// It must be either a name, a number, a string, a prefix `+` or `-`,
-  /// the `not` statement, or `(`, `[`, and `{`.
+  /// the `not` keyword, or `(`, `[`, and `{`.
   bool get hasTest {
     // final t = token;
     // return t.isName || t.isNumber || "+-([{\"'".contains(t.value[0]) || t.value == "not";

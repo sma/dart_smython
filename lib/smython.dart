@@ -23,7 +23,7 @@ class Smython {
   Smython() {
     builtin('print', (Frame cf, List<SmyValue> args) {
       print(args.map((v) => '$v').join(' '));
-      return None;
+      return none;
     });
     builtin('len', (Frame cf, List<SmyValue> args) {
       if (args.length != 1) throw 'TypeError: len() takes 1 argument (${args.length} given)';
@@ -47,9 +47,9 @@ class Smython {
           var end = index.values[1].isNone ? value.values.length : index.values[1].index;
           if (start < 0) start += length;
           if (end < 0) end += length;
-          if (start >= end) return None;
+          if (start >= end) return none;
           value.values.removeRange(start, end);
-          return None;
+          return none;
         }
         throw 'TypeError: invalid index';
       }
@@ -71,7 +71,7 @@ class Smython {
 }
 
 /// The global value representing no other value.
-const None = SmyValue.none;
+const none = SmyValue.none;
 
 /// Returns the Smython value for a Dart [value].
 SmyValue make(dynamic value) {
@@ -118,7 +118,7 @@ abstract class SmyValue {
   int get intValue => numValue.toInt();
   double get doubleValue => numValue.toDouble();
   String get stringValue => throw 'TypeError: Not a string';
-  SmyValue call(Frame f, List<SmyValue> args) => throw 'TypeError: Not callable';
+  SmyValue call(Frame cf, List<SmyValue> args) => throw 'TypeError: Not callable';
 
   Iterable<SmyValue> get iterable => throw 'TypeError: Not iterable';
   int get length => iterable.length;
@@ -335,11 +335,11 @@ class SmyClass extends SmyValue {
   String toString() => "<class '$_name'>";
 
   @override
-  SmyValue call(Frame f, List<SmyValue> args) {
+  SmyValue call(Frame cf, List<SmyValue> args) {
     final object = SmyObject(this);
     final init = findAttr('__init__');
     if (init is SmyFunc) {
-      init.call(f, <SmyValue>[object] + args);
+      init.call(cf, <SmyValue>[object] + args);
     }
     return object;
   }
@@ -395,8 +395,8 @@ class SmyMethod extends SmyValue {
   final SmyFunc func;
 
   @override
-  SmyValue call(Frame f, List<SmyValue> args) {
-    return func.call(f, <SmyValue>[self] + args);
+  SmyValue call(Frame cf, List<SmyValue> args) {
+    return func.call(cf, <SmyValue>[self] + args);
   }
 }
 

@@ -50,6 +50,9 @@ class Token {
   }
 
   @override
+  int get hashCode => value.hashCode;
+
+  @override
   String toString() => value == '\n' ? 'NEWLINE' : value;
 
   /// A synthetic token representing an indentation in the next line.

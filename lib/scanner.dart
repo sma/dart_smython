@@ -24,7 +24,7 @@ Iterable<Token> tokenize(String source) sync* {
   source += '\n';
 
   // compile the regular expression to tokenize the source
-  final _regex = RegExp(
+  final regex = RegExp(
     '^ *(?:#.*)?\n|#.*\$|(' // whitespace and comments
     '^ +|' // indentation
     '\n|' // newline
@@ -38,7 +38,7 @@ Iterable<Token> tokenize(String source) sync* {
     multiLine: true,
   );
 
-  for (final match in _regex.allMatches(source)) {
+  for (final match in regex.allMatches(source)) {
     // did we get a match (empty lines and comments are ignored)?
     final s = match.group(1);
     if (s == null) continue;

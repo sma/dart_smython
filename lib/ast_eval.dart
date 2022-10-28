@@ -183,7 +183,7 @@ class ClassStmt extends Stmt {
   @override
   SmyValue evaluate(Frame f) {
     final superclass = superExpr.evaluate(f);
-    if (superclass != SmyValue.none && !(superclass is SmyClass)) {
+    if (superclass != SmyValue.none && superclass is! SmyClass) {
       throw 'TypeError: superclass is not a class';
     }
     final n = SmyString.intern(name);

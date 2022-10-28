@@ -13,7 +13,6 @@ library test_runner;
 
 import 'dart:io';
 
-import 'parser.dart';
 import 'smython.dart';
 
 /// Runs the Smython test suite loaded from [filename].

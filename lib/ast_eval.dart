@@ -417,7 +417,14 @@ abstract class Expr {
   bool get assignable => false;
 
   // default arithmetic & bit operations
-  static SmyValue add(SmyValue l, SmyValue r) => SmyNum(l.numValue + r.numValue);
+  static SmyValue add(SmyValue l, SmyValue r) {
+    if (l is SmyNum && r is SmyNum)
+      return SmyNum(l.numValue + r.numValue);
+    if (l is SmyString && r is SmyString)
+      return SmyString(l.value + r.value);
+    else
+      throw "TypeError: left and right operand should be num or string for + to work";
+  }
   static SmyValue sub(SmyValue l, SmyValue r) => SmyNum(l.numValue - r.numValue);
   static SmyValue mul(SmyValue l, SmyValue r) => SmyNum(l.numValue * r.numValue);
   static SmyValue div(SmyValue l, SmyValue r) => SmyNum(l.numValue / r.numValue);
@@ -476,12 +483,47 @@ class CompOp {
 
   static bool eq(SmyValue l, SmyValue r) => l == r;
   static bool ne(SmyValue l, SmyValue r) => !eq(l, r);
-  static bool lt(SmyValue l, SmyValue r) => l.numValue < r.numValue;
-  static bool gt(SmyValue l, SmyValue r) => l.numValue > r.numValue;
-  static bool le(SmyValue l, SmyValue r) => l.numValue <= r.numValue;
-  static bool ge(SmyValue l, SmyValue r) => l.numValue >= r.numValue;
-
-  static bool in_(SmyValue l, SmyValue r) => throw UnimplementedError();
+  static bool lt(SmyValue l, SmyValue r) { 
+    if (l is SmyString && r is SmyString)
+      return l.value.compareTo(r.value) < 0;
+    else if (l is SmyNum && r is SmyNum)
+      return l.numValue < r.numValue;
+    else
+      throw UnimplementedError();
+  }
+  static bool gt(SmyValue l, SmyValue r) {
+    if (l is SmyString && r is SmyString)
+      return l.value.compareTo(r.value) > 0;
+    else if (l is SmyNum && r is SmyNum)
+      return l.numValue > r.numValue;
+    else
+      throw UnimplementedError();
+  }
+  static bool le(SmyValue l, SmyValue r) {
+    if (l is SmyString && r is SmyString)
+      return l.value.compareTo(r.value) <= 0;
+    else if (l is SmyNum && r is SmyNum)
+      return l.numValue <= r.numValue;
+    else
+      throw UnimplementedError();
+  }
+  static bool ge(SmyValue l, SmyValue r) {
+    if (l is SmyString && r is SmyString)
+      return l.value.compareTo(r.value) >= 0;
+    else if (l is SmyNum && r is SmyNum)
+      return l.numValue >= r.numValue;
+    else
+      throw UnimplementedError();
+  }
+  static bool in_(SmyValue l, SmyValue r) {
+    if (r is SmyDict)
+      return r.values.keys.contains(l);
+    if (r is SmyList)
+      return r.values.contains(l);
+    if (r is SmyString && l is SmyString)
+      return r.value.contains(l.value);
+    throw UnimplementedError();
+  }
   static bool notin(SmyValue l, SmyValue r) => !in_(l, r);
   static bool is_(SmyValue l, SmyValue r) => throw UnimplementedError();
   static bool notis(SmyValue l, SmyValue r) => !is_(l, r);

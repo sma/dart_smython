@@ -13,7 +13,7 @@ import 'package:smython/smython.dart';
 // -------- Suite --------
 
 /// A suite of [Stmt]s.
-class Suite {
+final class Suite {
   const Suite(this.stmts);
   final List<Stmt> stmts;
 
@@ -44,14 +44,14 @@ class Suite {
 // -------- Stmt --------
 
 /// A statement that can be executed.
-abstract class Stmt {
+sealed class Stmt {
   const Stmt();
 
   SmyValue evaluate(Frame f);
 }
 
 /// `if test: thenSuite else: elseSuite`
-class IfStmt extends Stmt {
+final class IfStmt extends Stmt {
   const IfStmt(this.test, this.thenSuite, this.elseSuite);
   final Expr test;
   final Suite thenSuite;
@@ -71,7 +71,7 @@ class IfStmt extends Stmt {
 }
 
 /// `while test: suite else: elseSuite`
-class WhileStmt extends Stmt {
+final class WhileStmt extends Stmt {
   const WhileStmt(this.test, this.suite, this.elseSuite);
   final Expr test;
   final Suite suite;
@@ -97,7 +97,7 @@ class WhileStmt extends Stmt {
 }
 
 /// `for target, ... in test, ...: suite else: suite`
-class ForStmt extends Stmt {
+final class ForStmt extends Stmt {
   const ForStmt(this.target, this.items, this.suite, this.elseSuite);
   final Expr target;
   final Expr items;
@@ -127,7 +127,7 @@ class ForStmt extends Stmt {
 }
 
 /// `try: suite finally: suite`
-class TryFinallyStmt extends Stmt {
+final class TryFinallyStmt extends Stmt {
   const TryFinallyStmt(this.suite, this.finallySuite);
   final Suite suite, finallySuite;
 
@@ -146,7 +146,7 @@ class TryFinallyStmt extends Stmt {
 }
 
 /// `try: suite except test as name: suite else: suite`
-class TryExceptStmt extends Stmt {
+final class TryExceptStmt extends Stmt {
   const TryExceptStmt(this.trySuite, this.excepts, this.elseSuite);
   final Suite trySuite, elseSuite;
   final List<ExceptClause> excepts;
@@ -177,7 +177,7 @@ class TryExceptStmt extends Stmt {
 }
 
 /// `except test as name: suite` (part of [TryExceptStmt])
-class ExceptClause {
+final class ExceptClause {
   const ExceptClause(this.test, this.name, this.suite);
   final Expr? test;
   final String? name;
@@ -192,7 +192,7 @@ class ExceptClause {
 }
 
 /// `def name(param=def, ...): suite`
-class DefStmt extends Stmt {
+final class DefStmt extends Stmt {
   const DefStmt(this.name, this.params, this.defs, this.suite);
   final String name;
   final List<String> params;
@@ -211,7 +211,7 @@ class DefStmt extends Stmt {
 }
 
 /// `class name (super): suite`
-class ClassStmt extends Stmt {
+final class ClassStmt extends Stmt {
   const ClassStmt(this.name, this.superExpr, this.suite);
   final String name;
   final Expr superExpr;
@@ -236,7 +236,7 @@ class ClassStmt extends Stmt {
 }
 
 /// `pass`
-class PassStmt extends Stmt {
+final class PassStmt extends Stmt {
   const PassStmt();
 
   /// Evaluates to `none`.
@@ -247,7 +247,7 @@ class PassStmt extends Stmt {
 }
 
 /// `break`
-class BreakStmt extends Stmt {
+final class BreakStmt extends Stmt {
   const BreakStmt();
 
   /// Throws an internal exception to break a [WhileStmt] or [ForStmt].
@@ -256,7 +256,7 @@ class BreakStmt extends Stmt {
 }
 
 /// `continue`
-class ContinueStmt extends Stmt {
+final class ContinueStmt extends Stmt {
   const ContinueStmt();
 
   /// Throws an internal exception to continue a [WhileStmt] or [ForStmt].
@@ -265,7 +265,7 @@ class ContinueStmt extends Stmt {
 }
 
 /// `return`, `return test, ...`
-class ReturnStmt extends Stmt {
+final class ReturnStmt extends Stmt {
   const ReturnStmt(this.expr);
   final Expr expr;
 
@@ -276,7 +276,7 @@ class ReturnStmt extends Stmt {
 }
 
 /// `raise`, `raise test`
-class RaiseStmt extends Stmt {
+final class RaiseStmt extends Stmt {
   const RaiseStmt(this.expr);
   final Expr expr;
 
@@ -286,7 +286,7 @@ class RaiseStmt extends Stmt {
 }
 
 /// `import NAME, ...`
-class ImportNameStmt extends Stmt {
+final class ImportNameStmt extends Stmt {
   const ImportNameStmt(this.names);
   final List<List<String>> names;
 
@@ -295,7 +295,7 @@ class ImportNameStmt extends Stmt {
 }
 
 /// `from NAME import NAME, ...`
-class FromImportStmt extends Stmt {
+final class FromImportStmt extends Stmt {
   const FromImportStmt(this.module, this.names);
   final String module;
   final List<List<String>> names;
@@ -305,7 +305,7 @@ class FromImportStmt extends Stmt {
 }
 
 /// `global NAME, ...`
-class GlobalStmt extends Stmt {
+final class GlobalStmt extends Stmt {
   const GlobalStmt(this.names);
   final List<String> names;
 
@@ -314,7 +314,7 @@ class GlobalStmt extends Stmt {
 }
 
 /// `assert test`, `assert test, test`
-class AssertStmt extends Stmt {
+final class AssertStmt extends Stmt {
   const AssertStmt(this.expr, this.message);
   final Expr expr;
   final Expr? message;
@@ -332,7 +332,7 @@ class AssertStmt extends Stmt {
 }
 
 /// `expr`
-class ExprStmt extends Stmt {
+final class ExprStmt extends Stmt {
   const ExprStmt(this.expr);
   final Expr expr;
 
@@ -342,7 +342,7 @@ class ExprStmt extends Stmt {
 }
 
 /// `target = test, ...`
-class AssignStmt extends Stmt {
+final class AssignStmt extends Stmt {
   const AssignStmt(this.lhs, this.rhs);
   final Expr lhs, rhs;
 
@@ -354,7 +354,7 @@ class AssignStmt extends Stmt {
 }
 
 /// Abstract superclass of all `lhs op= rhs` operations.
-abstract class AugAssignStmt extends Stmt {
+sealed class AugAssignStmt extends Stmt {
   const AugAssignStmt(this.lhs, this.rhs, this.op);
   final Expr lhs, rhs;
   final SmyValue Function(SmyValue, SmyValue) op;
@@ -364,37 +364,37 @@ abstract class AugAssignStmt extends Stmt {
 }
 
 /// `target += test`
-class AddAssignStmt extends AugAssignStmt {
+final class AddAssignStmt extends AugAssignStmt {
   const AddAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.add);
 }
 
 /// `target -= test`
-class SubAssignStmt extends AugAssignStmt {
+final class SubAssignStmt extends AugAssignStmt {
   const SubAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.sub);
 }
 
 /// `target *= test`
-class MulAssignStmt extends AugAssignStmt {
+final class MulAssignStmt extends AugAssignStmt {
   const MulAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.mul);
 }
 
 /// `target /= test`
-class DivAssignStmt extends AugAssignStmt {
+final class DivAssignStmt extends AugAssignStmt {
   const DivAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.div);
 }
 
 /// `target %= test, ...`
-class ModAssignStmt extends AugAssignStmt {
+final class ModAssignStmt extends AugAssignStmt {
   const ModAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.mod);
 }
 
 /// `target |= test`
-class OrAssignStmt extends AugAssignStmt {
+final class OrAssignStmt extends AugAssignStmt {
   const OrAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.or);
 }
 
 /// `target &= test`
-class AndAssignStmt extends AugAssignStmt {
+final class AndAssignStmt extends AugAssignStmt {
   const AndAssignStmt(Expr lhs, Expr rhs) : super(lhs, rhs, Expr.and);
 }
 
@@ -404,7 +404,7 @@ class AndAssignStmt extends AugAssignStmt {
 ///
 /// It might be [assignable] in which case it can be [assign]ed to. Trying
 /// to assign to something not [assignable] will raise an error.
-abstract class Expr {
+sealed class Expr {
   const Expr();
 
   /// Returns the result of the evaluation of this node in the context of [f].
@@ -427,7 +427,7 @@ abstract class Expr {
 }
 
 /// _expr_ `if` _test_ `else` _test_
-class CondExpr extends Expr {
+final class CondExpr extends Expr {
   const CondExpr(this.test, this.thenExpr, this.elseExpr);
   final Expr test, thenExpr, elseExpr;
 
@@ -438,7 +438,7 @@ class CondExpr extends Expr {
 }
 
 /// expr `or` expr
-class OrExpr extends Expr {
+final class OrExpr extends Expr {
   const OrExpr(this.left, this.right);
   final Expr left, right;
 
@@ -449,7 +449,7 @@ class OrExpr extends Expr {
 }
 
 /// expr `and` expr
-class AndExpr extends Expr {
+final class AndExpr extends Expr {
   const AndExpr(this.left, this.right);
   final Expr left, right;
 
@@ -460,7 +460,7 @@ class AndExpr extends Expr {
 }
 
 /// `not expr`
-class NotExpr extends Expr {
+final class NotExpr extends Expr {
   const NotExpr(this.expr);
   final Expr expr;
 
@@ -469,7 +469,7 @@ class NotExpr extends Expr {
 }
 
 /// `expr < expr`, `expr < expr < expr`
-class CompOp {
+final class CompOp {
   CompOp(this.op, this.right);
   final bool Function(SmyValue, SmyValue) op;
   final Expr right;
@@ -487,7 +487,7 @@ class CompOp {
   static bool notis(SmyValue l, SmyValue r) => !is_(l, r);
 }
 
-class Comparison extends Expr {
+final class Comparison extends Expr {
   Comparison(this.left, this.ops);
   final Expr left;
   final List<CompOp> ops;
@@ -505,7 +505,7 @@ class Comparison extends Expr {
 }
 
 /// `expr | expr`
-class BitOrExpr extends Expr {
+final class BitOrExpr extends Expr {
   const BitOrExpr(this.left, this.right);
   final Expr left, right;
 
@@ -516,7 +516,7 @@ class BitOrExpr extends Expr {
 }
 
 /// `expr & expr`
-class BitAndExpr extends Expr {
+final class BitAndExpr extends Expr {
   const BitAndExpr(this.left, this.right);
   final Expr left, right;
 
@@ -527,7 +527,7 @@ class BitAndExpr extends Expr {
 }
 
 /// `expr + expr`
-class AddExpr extends Expr {
+final class AddExpr extends Expr {
   const AddExpr(this.left, this.right);
   final Expr left, right;
 
@@ -538,7 +538,7 @@ class AddExpr extends Expr {
 }
 
 /// `expr - expr`
-class SubExpr extends Expr {
+final class SubExpr extends Expr {
   const SubExpr(this.left, this.right);
   final Expr left, right;
 
@@ -549,7 +549,7 @@ class SubExpr extends Expr {
 }
 
 /// `expr * expr`
-class MulExpr extends Expr {
+final class MulExpr extends Expr {
   const MulExpr(this.left, this.right);
   final Expr left, right;
 
@@ -560,7 +560,7 @@ class MulExpr extends Expr {
 }
 
 /// `expr / expr`
-class DivExpr extends Expr {
+final class DivExpr extends Expr {
   const DivExpr(this.left, this.right);
   final Expr left, right;
 
@@ -571,7 +571,7 @@ class DivExpr extends Expr {
 }
 
 /// `expr % expr`
-class ModExpr extends Expr {
+final class ModExpr extends Expr {
   const ModExpr(this.left, this.right);
   final Expr left, right;
 
@@ -582,7 +582,7 @@ class ModExpr extends Expr {
 }
 
 /// `+expr`
-class PosExpr extends Expr {
+final class PosExpr extends Expr {
   const PosExpr(this.expr);
   final Expr expr;
 
@@ -591,7 +591,7 @@ class PosExpr extends Expr {
 }
 
 /// `-expr`
-class NegExpr extends Expr {
+final class NegExpr extends Expr {
   const NegExpr(this.expr);
   final Expr expr;
 
@@ -600,7 +600,7 @@ class NegExpr extends Expr {
 }
 
 /// `expr(args, ...)`
-class CallExpr extends Expr {
+final class CallExpr extends Expr {
   const CallExpr(this.expr, this.args);
   final Expr expr;
   final List<Expr> args;
@@ -612,7 +612,7 @@ class CallExpr extends Expr {
 }
 
 /// `expr[expr]`
-class IndexExpr extends Expr {
+final class IndexExpr extends Expr {
   const IndexExpr(this.left, this.right);
   final Expr left, right;
 
@@ -663,7 +663,7 @@ class IndexExpr extends Expr {
 }
 
 /// `expr.NAME`
-class AttrExpr extends Expr {
+final class AttrExpr extends Expr {
   const AttrExpr(this.expr, this.name);
   final Expr expr;
   final String name;
@@ -683,7 +683,7 @@ class AttrExpr extends Expr {
 }
 
 /// `NAME`
-class VarExpr extends Expr {
+final class VarExpr extends Expr {
   const VarExpr(this.name);
   final SmyString name;
 
@@ -698,7 +698,7 @@ class VarExpr extends Expr {
 }
 
 /// `None`, `True`, `False`, `NUMBER`, `STRING`
-class LitExpr extends Expr {
+final class LitExpr extends Expr {
   const LitExpr(this.value);
   final SmyValue value;
 
@@ -707,7 +707,7 @@ class LitExpr extends Expr {
 }
 
 /// `()`, `(expr,)`, `(expr, ...)`
-class TupleExpr extends Expr {
+final class TupleExpr extends Expr {
   const TupleExpr(this.exprs);
   final List<Expr> exprs;
 
@@ -732,7 +732,7 @@ class TupleExpr extends Expr {
 }
 
 /// `[]`, `[expr, ...]`
-class ListExpr extends Expr {
+final class ListExpr extends Expr {
   const ListExpr(this.exprs);
   final List<Expr> exprs;
 
@@ -744,7 +744,7 @@ class ListExpr extends Expr {
 }
 
 /// `{}`, `{expr: expr, ...}`
-class DictExpr extends Expr {
+final class DictExpr extends Expr {
   const DictExpr(this.exprs);
   final List<Expr> exprs;
 
@@ -759,7 +759,7 @@ class DictExpr extends Expr {
 }
 
 /// `{expr, ...}`
-class SetExpr extends Expr {
+final class SetExpr extends Expr {
   const SetExpr(this.exprs);
   final List<Expr> exprs;
 
@@ -768,19 +768,19 @@ class SetExpr extends Expr {
 }
 
 /// Implements breaking loops.
-class _Break {}
+final class _Break {}
 
 /// Implements continuing loops.
-class _Continue {}
+final class _Continue {}
 
 /// Implements returning from functions.
-class _Return {
+final class _Return {
   _Return(this.value);
   final SmyValue value;
 }
 
 /// Implements raising exceptions.
-class _Raise {
+final class _Raise {
   _Raise(this.value);
   final SmyValue value;
 

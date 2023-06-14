@@ -84,7 +84,7 @@ class Smython {
 const none = SmyValue.none;
 
 /// Returns the Smython value for a Dart [value].
-SmyValue make(dynamic value) {
+SmyValue make(Object? value) {
   if (value == null) return SmyNone();
   if (value is SmyValue) return value;
   if (value is bool) return SmyBool(value);
@@ -110,13 +110,12 @@ SmyValue make(dynamic value) {
 /// - [SmyList] represents lists (mutable growable arrays)
 /// - [SmyDict] represents dicts (mutable hash maps)
 /// - [SmySet] represents sets (mutable hash sets)
-/// - [SmyBuiltin] represents built-in functions
-/// - [SmyFunc] represents user defined functions
-/// - [SmyMethod] represents methods
-/// - [SmyObject] represents objects
 /// - [SmyClass] represents classes
+/// - [SmyObject] represents objects (instances of classes)
+/// - [SmyMethod] represents methods (functions bound to instances)
+/// - [SmyFunc] represents user defined functions
+/// - [SmyBuiltin] represents built-in functions
 ///
-/// 
 /// Each value knows whether it is the [none] singleton.
 /// Each value has an associated boolean value ([boolValue]).
 /// Each value has a print string ([toString]).
@@ -127,12 +126,13 @@ SmyValue make(dynamic value) {
 /// Those values also have an associated [length].
 /// Some values have attributes which can be get, set and/or deleted.
 /// Some values are representable as a Dart map ([mapValue]).
-/// Some values are can be used a list index ([index]).
-/// 
+/// Some values can be used as a list index ([index]).
+///
 /// For efficency, [SmyString.intern] can be used to create unique strings,
 /// so called symbols which are used in [Frame] objects to lookup values.
-/// 
-abstract class SmyValue {
+///
+/// There are threee singletons: [none], [trueValue], and [falseValue].
+sealed class SmyValue {
   const SmyValue();
 
   bool get isNone => false;
@@ -145,9 +145,10 @@ abstract class SmyValue {
   Iterable<SmyValue> get iterable => throw 'TypeError: Not iterable';
   int get length => iterable.length;
 
-  SmyValue getAttr(String name) => throw "AttributeError: No attribute '$name'";
-  SmyValue setAttr(String name, SmyValue value) => throw "AttributeError: No attribute '$name'";
-  SmyValue delAttr(String name) => throw "AttributeError: No attribute '$name'";
+  Never attributeError(String name) => throw "AttributeError: No attribute '$name'";
+  SmyValue getAttr(String name) => attributeError(name);
+  SmyValue setAttr(String name, SmyValue value) => attributeError(name);
+  SmyValue delAttr(String name) => attributeError(name);
 
   Map<SmyValue, SmyValue> get mapValue => throw 'TypeError: Not a dict';
 
@@ -159,7 +160,7 @@ abstract class SmyValue {
 }
 
 /// `None` (singleton, equatable, hashable)
-class SmyNone extends SmyValue {
+final class SmyNone extends SmyValue {
   factory SmyNone() => SmyValue.none;
 
   const SmyNone._();
@@ -181,7 +182,7 @@ class SmyNone extends SmyValue {
 }
 
 /// `True` or `False` (singletons, equatable, hashable)
-class SmyBool extends SmyValue {
+final class SmyBool extends SmyValue {
   factory SmyBool(bool value) => value ? SmyValue.trueValue : SmyValue.falseValue;
 
   const SmyBool._(this.value);
@@ -202,7 +203,7 @@ class SmyBool extends SmyValue {
 }
 
 /// `NUMBER` (equatable, hashable)
-class SmyNum extends SmyValue {
+final class SmyNum extends SmyValue {
   const SmyNum(this.value);
   final num value;
 
@@ -229,7 +230,7 @@ class SmyNum extends SmyValue {
 }
 
 /// `STRING` (equatable, hashable)
-class SmyString extends SmyValue {
+final class SmyString extends SmyValue {
   const SmyString(this.value);
   final String value;
 
@@ -256,7 +257,7 @@ class SmyString extends SmyValue {
 }
 
 /// `(expr, ...)`
-class SmyTuple extends SmyValue {
+final class SmyTuple extends SmyValue {
   const SmyTuple(this.values);
   final List<SmyValue> values;
 
@@ -278,7 +279,7 @@ class SmyTuple extends SmyValue {
 }
 
 /// `[expr, ...]`
-class SmyList extends SmyValue {
+final class SmyList extends SmyValue {
   const SmyList(this.values);
   final List<SmyValue> values;
 
@@ -299,7 +300,7 @@ class SmyList extends SmyValue {
 }
 
 /// `{expr: expr, ...}`
-class SmyDict extends SmyValue {
+final class SmyDict extends SmyValue {
   const SmyDict(this.values);
   final Map<SmyValue, SmyValue> values;
 
@@ -320,7 +321,7 @@ class SmyDict extends SmyValue {
 }
 
 /// `{expr, ...}`
-class SmySet extends SmyValue {
+final class SmySet extends SmyValue {
   const SmySet(this.values);
   final Set<SmyValue> values;
 
@@ -341,7 +342,7 @@ class SmySet extends SmyValue {
 }
 
 /// `class name (super): ...`
-class SmyClass extends SmyValue {
+final class SmyClass extends SmyValue {
   SmyClass(this._name, this._superclass);
 
   final SmyString _name;
@@ -383,7 +384,7 @@ class SmyClass extends SmyValue {
 }
 
 /// class instance
-class SmyObject extends SmyValue {
+final class SmyObject extends SmyValue {
   SmyObject(this._class);
 
   final SmyClass _class;
@@ -417,7 +418,7 @@ class SmyObject extends SmyValue {
 }
 
 /// instance method
-class SmyMethod extends SmyValue {
+final class SmyMethod extends SmyValue {
   SmyMethod(this.self, this.func);
 
   final SmyObject self;
@@ -430,7 +431,7 @@ class SmyMethod extends SmyValue {
 }
 
 /// `def name(param, ...): ...`
-class SmyFunc extends SmyValue {
+final class SmyFunc extends SmyValue {
   const SmyFunc(this.df, this.name, this.params, this.defExprs, this.suite);
 
   final Frame df;
@@ -453,7 +454,7 @@ class SmyFunc extends SmyValue {
 }
 
 /// Builtin function like `print` or `len`.
-class SmyBuiltin extends SmyValue {
+final class SmyBuiltin extends SmyValue {
   const SmyBuiltin(this.name, this.func);
 
   final SmyString name;
@@ -469,7 +470,7 @@ class SmyBuiltin extends SmyValue {
 // -------- Runtime --------
 
 /// Runtime state passed to all AST nodes while evaluating them.
-class Frame {
+final class Frame {
   Frame(this.parent, this.locals, this.globals, this.builtins);
 
   /// Links to the parent frame, a.k.a. sender.
@@ -488,18 +489,10 @@ class Frame {
   /// then searching [globals], and last but not least searching the
   /// [builtins]. Throws a `NameError` if [name] is unbound.
   SmyValue lookup(SmyString name) {
-    if (locals.containsKey(name)) {
-      return locals[name]!;
-    }
-    if (parent != null) {
-      return parent!.lookup(name);
-    }
-    if (globals.containsKey(name)) {
-      return globals[name]!;
-    }
-    if (builtins.containsKey(name)) {
-      return builtins[name]!;
-    }
-    throw "NameError: name '$name' is not defined";
+    return locals[name] ??
+        parent?.lookup(name) ??
+        globals[name] ??
+        builtins[name] ??
+        (throw "NameError: name '$name' is not defined");
   }
 }

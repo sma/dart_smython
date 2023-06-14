@@ -6,11 +6,11 @@ export 'token.dart';
 
 /// Returns an iterable of [Token]s generated from [source].
 ///
-/// Restrictions in comparison with Python:
+/// Restrictions compared to Python:
 /// * Code must be indented by exactly four spaces.
 /// * TABs are not allowed.
-/// * Open parentheses do not relax indentation rules.
-/// * Lines ending with `\` are joined with the next line and mess up line numbers.
+/// * Lines ending with `\` are joined with the next line and mess up
+///   line numbers in error messages.
 Iterable<Token> tokenize(String source) sync* {
   // keep track of indentation
   var curIndent = 0;
@@ -42,7 +42,7 @@ Iterable<Token> tokenize(String source) sync* {
 
   for (final match in regex.allMatches(source)) {
     // did we get a match (empty lines and comments are ignored)?
-    final s = match.group(1);
+    final s = match[1];
     if (s == null) continue;
     if (s[0] == ' ') {
       // compute new indentation which is applied before the next non-whitespace token

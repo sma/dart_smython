@@ -30,8 +30,8 @@ bool run(String filename) {
     } else {
       final expected = line;
       final source = buffer.toString();
-      report.writeln('----------');
-      report.write(source);
+      // report.writeln('----------');
+      // report.write(source);
 
       String actual;
       try {
@@ -42,8 +42,10 @@ bool run(String filename) {
         actual = '$e';
       }
       if (actual == expected) {
-        report.writeln('OK');
+        // report.writeln('OK');
       } else {
+        report.writeln('----------');
+        report.write(source);
         report.writeln('Actual..: $actual');
         report.writeln('Expected: $expected');
         failures++;
@@ -74,7 +76,7 @@ String repr(SmyValue? value) {
   } else if (value is SmyList) {
     return '[${value.values.map(repr).join(', ')}]';
   } else if (value is SmySet) {
-    return '{${value.values.map(repr).toList()..sort()}}';
+    return '{${(value.values.map(repr).toList()..sort()).join(', ')}}';
   } else if (value is SmyDict) {
     final v = value.values.entries.map((e) => MapEntry(repr(e.key), repr(e.value))).toList();
     return '{${(v..sort((a, b) => a.key.compareTo(b.key))).map((e) => '${e.key}: ${e.value}').join(', ')}}';

@@ -495,4 +495,13 @@ final class Frame {
         builtins[name] ??
         (throw "NameError: name '$name' is not defined");
   }
+
+  SmyValue set(SmyString name, SmyValue value) {
+    for (Frame? f = this; f != null; f = f.parent) {
+      if (f.locals.containsKey(name)) {
+        return f.locals[name] = value;
+      }
+    }
+    return locals[name] = value;
+  }
 }

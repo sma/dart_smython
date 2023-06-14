@@ -691,7 +691,7 @@ final class VarExpr extends Expr {
   SmyValue evaluate(Frame f) => f.lookup(name);
 
   @override
-  SmyValue assign(Frame f, value) => f.locals[name] = value;
+  SmyValue assign(Frame f, value) => f.set(name, value);
 
   @override
   bool get assignable => true;
@@ -764,7 +764,7 @@ final class SetExpr extends Expr {
   final List<Expr> exprs;
 
   @override
-  SmyValue evaluate(Frame f) => throw 'set not yet implemented';
+  SmyValue evaluate(Frame f) => SmySet(exprs.map((e) => e.evaluate(f)).toSet());
 }
 
 /// Implements breaking loops.

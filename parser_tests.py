@@ -22,6 +22,8 @@
 6
 >>> 9/3
 3.0
+>>> 4 % 3
+1
 >>> 1+2*3
 7
 >>> (1+2)*3
@@ -134,6 +136,10 @@ False
 'Hallo, Welt'
 >>> "'" '"'
 '\'"'
+>>> "\n"
+'\n'
+>>> ''
+''
 >>> a = "abc"
 >>> len(a)
 3
@@ -168,6 +174,22 @@ IndexError: index out of range
 >>> a = {'a': 3, 'b': 4}
 >>> len(a), a['a'], a['b'], a['c']
 (2, 3, 4, None)
+
+# sets
+>>> {1}
+{1}
+>>> {1,2,2,1}
+{1, 2}
+
+# in
+>>> 3 in [1, 2, 3], 3 not in [1, 2]
+UnimplementedError
+>>> 3 in (1, 2, 3), 3 not in (1, 2)
+UnimplementedError
+>>> 3 in {1, 2, 3}, 3 not in {1, 2}
+UnimplementedError
+>>> 3 in {1: '1', 2: '2', 3: '3'}, 3 not in {1: 1, 2: 2}
+UnimplementedError
 
 # complex for
 >>> kk, vv = 0, 0
@@ -230,6 +252,15 @@ True
 ...     a = a + 1
 >>> a
 5
+>>> a = 0
+... try:
+...     raise 2
+... except 1:
+...     a = 1
+... except 2 as b:
+...     a = b
+... a
+2
 
 # classes & instances
 >>> class A:
@@ -280,6 +311,10 @@ SyntaxError: expected : but found NEWLINE at line 1
 SyntaxError: expected NEWLINE but found 1 at line 1
 >>> class "A"
 SyntaxError: expected NAME but found "A" at line 1
+>>> global a, b,
+SyntaxError: expected NAME but found NEWLINE at line 1
+>>> a = 
+SyntaxError: expected (, [, {, NAME, NUMBER, or STRING but found NEWLINE at line 1
 
 # no INDENT/DEDENT/NEWLINE inside of parentheses
 >>> a = [1,
@@ -333,3 +368,13 @@ UnimplementedError
 True
 >>> 1 < 1 < 5, 1 < 5 < 5
 (False, False)
+>>> 4 >= 3
+True
+
+# global
+>>> x = 1
+... def f(x):
+...     global x
+...     return x
+... f(2)
+UnimplementedError

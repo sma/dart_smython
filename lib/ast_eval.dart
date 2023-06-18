@@ -599,6 +599,15 @@ final class NegExpr extends Expr {
   SmyValue evaluate(Frame f) => SmyNum(-expr.evaluate(f).numValue);
 }
 
+/// `~expr`
+final class InvertExpr extends Expr {
+  const InvertExpr(this.expr);
+  final Expr expr;
+
+  @override
+  SmyValue evaluate(Frame f) => SmyNum(~expr.evaluate(f).intValue);
+}
+
 /// `expr(args, ...)`
 final class CallExpr extends Expr {
   const CallExpr(this.expr, this.args);

@@ -18,7 +18,7 @@
 /// no `@=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, `//=` or `**=`,
 /// no `from` clause in `raise`, no `with` statement, no combined
 /// `try`/`except`/`finally`, no multiple inheritance in classes, no
-/// lambdas, no `<>`, `@`, `//`, `^`, `<<`, `>>` or `~` operators,
+/// lambdas, no `<>`, `@`, `//`, `^`, `<<`, or `>>` operators,
 /// no `await`, no list or dict comprehension, no `...`, no list in `[ `
 /// but only a single value or slice, no tripple-quoted, byte, or raw
 /// strings, only unicode ones.
@@ -71,7 +71,7 @@
 /// and_expr: arith_expr {'&' arith_expr}
 /// arith_expr: term {('+'|'-') term}
 /// term: factor {('*'|'/'|'%') factor}
-/// factor: ('+'|'-') factor | power
+/// factor: ('+'|'-'|'~') factor | power
 /// power: atom {trailer}
 /// trailer: '(' [testlist] ')' | '[' subscript ']' | '.' NAME
 /// subscript: test | [test] ':' [test] [':' [test]]
@@ -536,10 +536,11 @@ class Parser {
     return expr;
   }
 
-  /// `factor: ('+'|'-') factor | power`
+  /// `factor: ('+'|'-'|'~') factor | power`
   Expr parseFactor() {
     if (at('+')) return PosExpr(parseFactor());
     if (at('-')) return NegExpr(parseFactor());
+    if (at('~')) return InvertExpr(parseFactor());
     return parsePower();
   }
 
@@ -683,12 +684,12 @@ class Parser {
   }
 
   /// Returns whether the current token is a valid start of a `test`.
-  /// It must be either a name, a number, a string, a prefix `+` or `-`,
-  /// the `not` keyword, or `(`, `[`, and `{`.
+  /// It must be either a name, a number, a string, a prefix `+` or `-` or
+  /// `~`, the `not` keyword, or `(`, `[`, and `{`.
   bool get hasTest {
     // final t = token;
-    // return t.isName || t.isNumber || "+-([{\"'".contains(t.value[0]) || t.value == "not";
-    return token.value.startsWith(RegExp('[-+\'"\\d([{]')) || token.isName || token.value == 'not';
+    // return t.isName || t.isNumber || "+-~([{\"'".contains(t.value[0]) || t.value == "not";
+    return token.value.startsWith(RegExp('[-+~\'"\\d([{]')) || token.isName || token.value == 'not';
   }
 }
 

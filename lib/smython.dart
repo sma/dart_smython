@@ -16,6 +16,9 @@
 /// throw if there is no Smython value of tha given Dart value.
 library smython;
 
+import 'dart:io';
+import 'dart:math';
+
 import 'ast_eval.dart' show Expr, Suite;
 import 'parser.dart' show parse;
 
@@ -27,6 +30,7 @@ typedef SmythonBuiltin = SmyValue Function(Frame f, List<SmyValue> args);
 class Smython {
   final builtins = <SmyValue, SmyValue>{};
   final globals = <SmyValue, SmyValue>{};
+  final modules = <SmyValue, SmyValue>{};
 
   Smython() {
     builtin('print', (f, args) {
@@ -66,6 +70,52 @@ class Smython {
       }
       throw 'TypeError: Unsupported item deletion';
     });
+    builtin('range', (f, args) {
+      if (args.isEmpty) {
+        throw 'TypeError: range expected at least 1 argument, got ${args.length}';
+      }
+      if (args.length > 3) {
+        throw 'TypeError: range expected at most 3 arguments, got ${args.length}';
+      }
+      var begin = 0;
+      var end = args[0].intValue;
+      var step = 1;
+      if (args.length == 2) {
+        begin = end;
+        end = args[1].intValue;
+      }
+      if (args.length == 3) {
+        step = args[2].intValue;
+      }
+      if (step == 0) throw 'ValueError: range() arg 3 must not be zero';
+      if (step < 0) {
+        return SmyList([for (var i = begin; i > end; i += step) SmyNum(i)]);
+      }
+      return SmyList([for (var i = begin; i < end; i += step) SmyNum(i)]);
+    });
+    builtin('hasattr', (f, args) {
+      if (args.length != 2) throw 'TypeError: hasattr() takes 2 arguments (${args.length} given)';
+      final value = args[0];
+      final key = args[1];
+      if (value is SmyList) {
+        return SmyBool(value.values.contains(key));
+      }
+      if (value is SmyDict) {
+        return SmyBool(value.values.containsKey(key));
+      }
+      if (value is SmyModule) {
+        return SmyBool(value.globals.values.containsKey(key));
+      }
+      throw 'TypeError: Unsupported hasattr()';
+    });
+    builtin('chr', (f, args) {
+      if (args.length != 1) throw 'TypeError: chr() takes 1 argument (${args.length} given)';
+      return SmyString(String.fromCharCode(args[0].intValue));
+    });
+    builtin('ord', (f, args) {
+      if (args.length != 1) throw 'TypeError: ord() takes 1 argument (${args.length} given)';
+      return SmyNum(args[0].stringValue.codeUnitAt(0));
+    });
   }
 
   /// Adds [func] as a new builtin function [name] to the system.
@@ -74,9 +124,98 @@ class Smython {
     builtins[bname] = SmyBuiltin(bname, func);
   }
 
+  SmyModule? import(String moduleName) {
+    final name = SmyString.intern(moduleName);
+    final module = modules[name];
+    if (module is SmyModule) return module;
+
+    if (moduleName == 'sys') {
+      return modules[name] = SmyModule(
+        name,
+        SmyDict({
+          SmyString('modules'): SmyDict(modules),
+        }),
+      );
+    }
+
+    if (moduleName == 'os') {
+      return modules[name] = SmyModule(
+        name,
+        SmyDict({
+          SmyString('getlogin'): SmyBuiltin(SmyString('getlogin'), (cf, args) {
+            return SmyString(Platform.environment['USER'] ?? '');
+          }),
+          SmyString('getpid'): SmyBuiltin(SmyString('getpid'), (cf, args) {
+            return SmyNum(pid);
+          }),
+        }),
+      );
+    }
+
+    if (moduleName == 'random') {
+      var random = Random();
+      return modules[name] = SmyModule(
+        name,
+        SmyDict({
+          SmyString('seed'): SmyBuiltin(SmyString('seed'), (cf, args) {
+            random = Random(args[0].intValue);
+            return none;
+          }),
+          SmyString('randint'): SmyBuiltin(SmyString('randint'), (cf, args) {
+            final min = args[0].intValue;
+            final max = args[1].intValue;
+            return SmyNum(random.nextInt(max - min) + min);
+          }),
+        }),
+      );
+    }
+
+    String source;
+    if (moduleName == 'curses') {
+      source = '''
+class Curses:
+    def clear(self): pass
+    def clrtoeol(self): pass
+    def getkey(self): return '?'
+    def move(self, row, col): pass
+    def inch(self, row, col): return 0
+    def refresh(self): pass
+    def standout(self): pass
+    def standend(self): pass
+    def addch(self, *args): pass
+    def addstr(self, *args): pass
+def cbreak(): pass
+def noecho(): pass
+def nonl(): pass
+def endwin(): pass
+def beep(): pass
+def initscr(): return Curses()
+''';
+    } else if (moduleName == 'atexit') {
+      source = '''
+def register(func): pass
+''';
+    } else if (moduleName == 'copy') {
+      source = '''
+def copy(obj): return obj
+''';
+    } else if (moduleName == 'time') {
+      source = '''
+''';
+    } else {
+      final file = File('pyrogue/$moduleName.py');
+      if (!file.existsSync()) return null;
+      source = file.readAsStringSync();
+    }
+    final globals = <SmyValue, SmyValue>{};
+    modules[name] = SmyModule(name, SmyDict(globals));
+    parse(source).evaluate(Frame(null, globals, globals, builtins, this));
+    return modules[name] as SmyModule;
+  }
+
   /// Runs [source].
   void execute(String source) {
-    parse(source).evaluate(Frame(null, globals, globals, builtins));
+    parse(source).evaluate(Frame(null, globals, globals, builtins, this));
   }
 }
 
@@ -224,8 +363,7 @@ final class SmyNum extends SmyValue {
 
   @override
   int get index {
-    if (value is int) return intValue;
-    return super.index;
+    return intValue.toInt();
   }
 }
 
@@ -254,6 +392,28 @@ final class SmyString extends SmyValue {
 
   @override
   int get length => value.length;
+
+  SmyString format(SmyValue args) {
+    if (args is SmyTuple) {
+      var index = 0;
+      return SmyString(stringValue.replaceAllMapped(RegExp(r'%%|%(\d+)?([sd])'), (match) {
+        if (match[0] == '%%') return '%';
+        String value;
+        if (match[2] == 's') {
+          value = '${args.values[index++]}';
+        } else {
+          value = '${args.values[index++].intValue}';
+        }
+        if (match[1] != null) {
+          final width = int.parse(match[1]!);
+          value = value.padLeft(width);
+        }
+        return value;
+      }));
+    }
+    if (args is SmyList) return format(SmyTuple(args.values));
+    return format(SmyTuple([args]));
+  }
 }
 
 /// `(expr, ...)`
@@ -297,6 +457,21 @@ final class SmyList extends SmyValue {
 
   @override
   int get length => values.length;
+
+  @override
+  SmyValue getAttr(String name) {
+    if (name == 'append') {
+      return SmyMethod(
+        this,
+        SmyBuiltin(SmyString.intern('append'), (f, args) {
+          if (args.length != 2) throw 'TypeError: list.append() takes exactly one argument (${args.length - 1} given)';
+          values.add(args[1]);
+          return none;
+        }),
+      );
+    }
+    return super.getAttr(name);
+  }
 }
 
 /// `{expr: expr, ...}`
@@ -314,10 +489,37 @@ final class SmyDict extends SmyValue {
   bool get boolValue => values.isNotEmpty;
 
   @override
+  Map<SmyValue, SmyValue> get mapValue => values;
+
+  @override
   Iterable<SmyValue> get iterable => values.entries.map((e) => SmyTuple([e.key, e.value]));
 
   @override
   int get length => values.length;
+
+  @override
+  SmyValue getAttr(String name) {
+    if (name == 'values') {
+      return SmyMethod(
+        this,
+        SmyBuiltin(SmyString.intern('values'), (f, args) {
+          if (args.length != 1) throw 'TypeError: dict.values() takes no arguments (${args.length - 1} given)';
+          return SmyList(values.values.toList());
+        }),
+      );
+    }
+    if (name == 'update') {
+      return SmyMethod(
+        this,
+        SmyBuiltin(SmyString.intern('update'), (f, args) {
+          if (args.length != 2) throw 'TypeError: dict.update() takes one argument (${args.length - 1} given)';
+          values.addAll(args[1].mapValue);
+          return none;
+        }),
+      );
+    }
+    return super.getAttr(name);
+  }
 }
 
 /// `{expr, ...}`
@@ -379,7 +581,14 @@ final class SmyClass extends SmyValue {
     if (name == '__name__') return _name;
     if (name == '__superclass__') return _superclass ?? SmyValue.none;
     if (name == '__dict__') return _dict;
+    final value = _dict.values[SmyString(name)];
+    if (value != null) return value;
     return super.getAttr(name);
+  }
+
+  @override
+  SmyValue setAttr(String name, SmyValue value) {
+    return _dict.values[SmyString(name)] = value;
   }
 }
 
@@ -421,8 +630,8 @@ final class SmyObject extends SmyValue {
 final class SmyMethod extends SmyValue {
   SmyMethod(this.self, this.func);
 
-  final SmyObject self;
-  final SmyFunc func;
+  final SmyValue self;
+  final SmyValue func;
 
   @override
   SmyValue call(Frame cf, List<SmyValue> args) {
@@ -445,9 +654,14 @@ final class SmyFunc extends SmyValue {
 
   @override
   SmyValue call(Frame cf, List<SmyValue> args) {
-    final f = Frame(df, {}, df.globals, df.builtins);
+    final f = Frame(df, {}, df.globals, df.builtins, df.system);
     for (var i = 0, j = 0; i < params.length; i++) {
-      f.locals[SmyString(params[i])] = i < args.length ? args[i] : defExprs[j++].evaluate(df);
+      final param = params[i];
+      if (param.startsWith('*')) {
+        f.locals[SmyString.intern(param.substring(1))] = SmyTuple(args.sublist(i));
+        break;
+      }
+      f.locals[SmyString.intern(param)] = i < args.length ? args[i] : defExprs[j++].evaluate(df);
     }
     return suite.evaluateAsFunc(f);
   }
@@ -467,11 +681,30 @@ final class SmyBuiltin extends SmyValue {
   SmyValue call(Frame cf, List<SmyValue> args) => func(cf, args);
 }
 
+final class SmyModule extends SmyValue {
+  const SmyModule(this.name, this.globals);
+
+  final SmyString name;
+  final SmyDict globals;
+
+  @override
+  String toString() => '<module $name>';
+
+  @override
+  SmyValue getAttr(String name) {
+    if (name == '__name__') return this.name;
+    if (name == '__dict__') return globals;
+    final value = globals.values[SmyString(name)];
+    if (value != null) return value;
+    return super.getAttr(name);
+  }
+}
+
 // -------- Runtime --------
 
 /// Runtime state passed to all AST nodes while evaluating them.
 final class Frame {
-  Frame(this.parent, this.locals, this.globals, this.builtins);
+  Frame(this.parent, this.locals, this.globals, this.builtins, this.system);
 
   /// Links to the parent frame, a.k.a. sender.
   final Frame? parent;
@@ -484,6 +717,9 @@ final class Frame {
 
   /// Shared bindings global to this frame, not overwritable.
   final Map<SmyValue, SmyValue> builtins;
+
+  /// Shared reference to the runtime system.
+  final Smython system;
 
   /// Returns the value bound to [name] by first searching [locals],
   /// then searching [globals], and last but not least searching the

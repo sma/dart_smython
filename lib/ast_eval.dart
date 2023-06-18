@@ -165,7 +165,7 @@ final class TryExceptStmt extends Stmt {
         if (except.matches(f, e.value)) {
           var ff = f;
           if (except.name != null) {
-            ff = Frame(f, {SmyString(except.name!): e.value}, f.globals, f.builtins);
+            ff = Frame(f, {SmyString(except.name!): e.value}, f.globals, f.builtins, f.system);
           }
           return except.suite.evaluate(ff);
         }
@@ -230,7 +230,7 @@ final class ClassStmt extends Stmt {
     final n = SmyString.intern(name);
     final cls = SmyClass(n, superclass != SmyValue.none ? superclass as SmyClass : null);
     f.locals[n] = cls;
-    suite.evaluate(Frame(f, cls.methods, f.globals, f.builtins));
+    suite.evaluate(Frame(f, cls.methods, f.globals, f.builtins, f.system));
     return SmyValue.none;
   }
 }
@@ -291,17 +291,37 @@ final class ImportNameStmt extends Stmt {
   final List<List<String>> names;
 
   @override
-  SmyValue evaluate(Frame f) => throw UnimplementedError();
+  SmyValue evaluate(Frame f) {
+    for (final name in names) {
+      final moduleName = name.first;
+      final asName = name.length == 2 ? name.last : moduleName;
+      final module = f.system.import(moduleName) ?? (throw "ModuleNotFoundError: No module named '$moduleName'");
+      f.locals[SmyString.intern(asName)] = module;
+    }
+    return none;
+  }
 }
 
 /// `from NAME import NAME, ...`
 final class FromImportStmt extends Stmt {
-  const FromImportStmt(this.module, this.names);
-  final String module;
+  const FromImportStmt(this.moduleName, this.names);
+  final String moduleName;
   final List<List<String>> names;
 
   @override
-  SmyValue evaluate(Frame f) => throw UnimplementedError();
+  SmyValue evaluate(Frame f) {
+    final module = f.system.import(moduleName) ?? (throw "ModuleNotFoundError: No module named '$moduleName'");
+    if (names.isEmpty) {
+      f.locals.addAll(module.globals.values);
+    } else {
+      for (final name in names) {
+        final varName = name.first;
+        final asName = name.length == 2 ? name.last : varName;
+        f.locals[SmyString.intern(asName)] = module.getAttr(varName);
+      }
+    }
+    return none;
+  }
 }
 
 /// `global NAME, ...`
@@ -417,11 +437,35 @@ sealed class Expr {
   bool get assignable => false;
 
   // default arithmetic & bit operations
-  static SmyValue add(SmyValue l, SmyValue r) => SmyNum(l.numValue + r.numValue);
+  static SmyValue add(SmyValue l, SmyValue r) {
+    if (l is SmyString && r is SmyString) {
+      return SmyString(l.stringValue + r.stringValue);
+    }
+    return SmyNum(l.numValue + r.numValue);
+  }
+
   static SmyValue sub(SmyValue l, SmyValue r) => SmyNum(l.numValue - r.numValue);
-  static SmyValue mul(SmyValue l, SmyValue r) => SmyNum(l.numValue * r.numValue);
+  static SmyValue mul(SmyValue l, SmyValue r) {
+    if (l is SmyString) {
+      return SmyString(l.stringValue * r.intValue);
+    }
+    if (l is SmyList) {
+      final result = <SmyValue>[];
+      var count = r.intValue;
+      while (count-- > 0) {
+        result.addAll(l.values);
+      }
+      return SmyList(result);
+    }
+    return SmyNum(l.numValue * r.numValue);
+  }
+
   static SmyValue div(SmyValue l, SmyValue r) => SmyNum(l.numValue / r.numValue);
-  static SmyValue mod(SmyValue l, SmyValue r) => SmyNum(l.numValue % r.numValue);
+  static SmyValue mod(SmyValue l, SmyValue r) {
+    if (l is SmyString) return l.format(r);
+    return SmyNum(l.numValue % r.numValue);
+  }
+
   static SmyValue or(SmyValue l, SmyValue r) => SmyNum(l.intValue | r.intValue);
   static SmyValue and(SmyValue l, SmyValue r) => SmyNum(l.intValue & r.intValue);
 }
@@ -435,6 +479,9 @@ final class CondExpr extends Expr {
   SmyValue evaluate(Frame f) {
     return (test.evaluate(f).boolValue ? thenExpr : elseExpr).evaluate(f);
   }
+
+  @override
+  String toString() => '$thenExpr if $test else $elseExpr';
 }
 
 /// expr `or` expr
@@ -481,7 +528,11 @@ final class CompOp {
   static bool le(SmyValue l, SmyValue r) => l.numValue <= r.numValue;
   static bool ge(SmyValue l, SmyValue r) => l.numValue >= r.numValue;
 
-  static bool in_(SmyValue l, SmyValue r) => throw UnimplementedError();
+  static bool in_(SmyValue l, SmyValue r) {
+    if (l is SmyString && r is SmyString) return r.stringValue.contains(l.stringValue);
+    throw UnimplementedError();
+  }
+
   static bool notin(SmyValue l, SmyValue r) => !in_(l, r);
   static bool is_(SmyValue l, SmyValue r) => throw UnimplementedError();
   static bool notis(SmyValue l, SmyValue r) => !is_(l, r);
@@ -524,6 +575,9 @@ final class BitAndExpr extends Expr {
   SmyValue evaluate(Frame f) {
     return Expr.and(left.evaluate(f), right.evaluate(f));
   }
+
+  @override
+  String toString() => '$left & $right';
 }
 
 /// `expr + expr`
@@ -535,6 +589,9 @@ final class AddExpr extends Expr {
   SmyValue evaluate(Frame f) {
     return Expr.add(left.evaluate(f), right.evaluate(f));
   }
+
+  @override
+  String toString() => '$left + $right';
 }
 
 /// `expr - expr`
@@ -546,6 +603,9 @@ final class SubExpr extends Expr {
   SmyValue evaluate(Frame f) {
     return Expr.sub(left.evaluate(f), right.evaluate(f));
   }
+
+  @override
+  String toString() => '$left - $right';
 }
 
 /// `expr * expr`
@@ -579,6 +639,9 @@ final class ModExpr extends Expr {
   SmyValue evaluate(Frame f) {
     return Expr.mod(left.evaluate(f), right.evaluate(f));
   }
+
+  @override
+  String toString() => '$left % $right';
 }
 
 /// `+expr`
@@ -616,8 +679,12 @@ final class CallExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) {
+    // print('call: $this');
     return expr.evaluate(f).call(f, args.map<SmyValue>((arg) => arg.evaluate(f)).toList());
   }
+
+  @override
+  String toString() => '$expr(${args.join(', ')})';
 }
 
 /// `expr[expr]`
@@ -665,10 +732,20 @@ final class IndexExpr extends Expr {
   }
 
   @override
-  SmyValue assign(Frame f, value) => throw '[]= not implemented yet';
+  SmyValue assign(Frame f, value) {
+    final target = left.evaluate(f);
+    final index = right.evaluate(f);
+    if (target is SmyList) {
+      return target.values[index.index] = value;
+    }
+    throw '[]= not implemented yet';
+  }
 
   @override
   bool get assignable => true;
+
+  @override
+  String toString() => '$left[$right]';
 }
 
 /// `expr.NAME`
@@ -689,6 +766,9 @@ final class AttrExpr extends Expr {
 
   @override
   bool get assignable => true;
+
+  @override
+  String toString() => '$expr.$name';
 }
 
 /// `NAME`
@@ -704,6 +784,9 @@ final class VarExpr extends Expr {
 
   @override
   bool get assignable => true;
+
+  @override
+  String toString() => name.stringValue;
 }
 
 /// `None`, `True`, `False`, `NUMBER`, `STRING`
@@ -713,6 +796,9 @@ final class LitExpr extends Expr {
 
   @override
   SmyValue evaluate(Frame f) => value;
+
+  @override
+  String toString() => value.toString();
 }
 
 /// `()`, `(expr,)`, `(expr, ...)`

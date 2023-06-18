@@ -26,5 +26,5 @@ void testParse(String filename) {
 
 void main() {
   testParse('pyrogue');
-  // run('pyrogue/main.py');
+  run('pyrogue/main.py');
 }

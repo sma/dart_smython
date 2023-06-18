@@ -289,6 +289,7 @@ class Parser {
 
   /// `parameter: NAME ['=' test]`
   String parseParameter(List<Expr> defExprs) {
+    if (at('*')) return '*${parseName()}';
     final name = parseName();
     if (at('=')) defExprs.add(parseTest());
     return name;

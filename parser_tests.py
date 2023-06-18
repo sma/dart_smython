@@ -355,19 +355,19 @@ AssertionError: message
 
 # imports
 >>> import a
-UnimplementedError
+ModuleNotFoundError: No module named 'a'
 >>> import a as x
-UnimplementedError
+ModuleNotFoundError: No module named 'a'
 >>> import a, b,
-UnimplementedError
+ModuleNotFoundError: No module named 'a'
 >>> import a, b as x
-UnimplementedError
+ModuleNotFoundError: No module named 'a'
 >>> from a import *
-UnimplementedError
+ModuleNotFoundError: No module named 'a'
 >>> from a import a
-UnimplementedError
+ModuleNotFoundError: No module named 'a'
 >>> from a import a, b as x, c,
-UnimplementedError
+ModuleNotFoundError: No module named 'a'
 
 # complex comparison
 >>> 1 < 4 < 5

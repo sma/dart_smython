@@ -35,8 +35,9 @@ bool run(String filename) {
 
       String actual;
       try {
+        final system = Smython();
         final suite = parse(source);
-        final frame = Frame(null, {}, {}, Smython().builtins);
+        final frame = Frame(null, {}, {}, system.builtins, system);
         actual = repr(suite.evaluate(frame));
       } catch (e) {
         actual = '$e';

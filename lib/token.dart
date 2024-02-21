@@ -51,7 +51,7 @@ class Token {
   }
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     return other is Token && value == other.value;
   }
 

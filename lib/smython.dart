@@ -305,7 +305,7 @@ final class SmyNone extends SmyValue {
   const SmyNone._();
 
   @override
-  bool operator ==(dynamic other) => other is SmyNone;
+  bool operator ==(Object other) => other is SmyNone;
 
   @override
   int get hashCode => 18736098234;
@@ -329,7 +329,7 @@ final class SmyBool extends SmyValue {
   final bool value;
 
   @override
-  bool operator ==(dynamic other) => other is SmyBool && value == other.value;
+  bool operator ==(Object other) => other is SmyBool && value == other.value;
 
   @override
   int get hashCode => value.hashCode;
@@ -347,7 +347,7 @@ final class SmyNum extends SmyValue {
   final num value;
 
   @override
-  bool operator ==(dynamic other) => other is SmyNum && value == other.value;
+  bool operator ==(Object other) => other is SmyNum && value == other.value;
 
   @override
   int get hashCode => value.hashCode;
@@ -376,7 +376,7 @@ final class SmyString extends SmyValue {
   static SmyString intern(String value) => _interns.putIfAbsent(value, () => SmyString(value));
 
   @override
-  bool operator ==(dynamic other) => other is SmyString && value == other.value;
+  bool operator ==(Object other) => other is SmyString && value == other.value;
 
   @override
   int get hashCode => value.hashCode;
